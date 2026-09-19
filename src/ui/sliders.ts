@@ -29,7 +29,8 @@ export const createTuningPanel = (state: GameState): TuningPanel => {
 
   const readout = document.createElement('div')
   readout.className =
-    'pointer-events-none absolute left-3 top-[calc(env(safe-area-inset-top)+0.75rem)] ' +
+    // Bottom corner: the top of the screen belongs to the level bar now.
+    'pointer-events-none absolute left-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] ' +
     'rounded bg-slate-900/70 px-2 py-1 font-mono text-[11px] text-white'
 
   const panel = document.createElement('div')

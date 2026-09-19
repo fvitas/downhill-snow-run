@@ -60,6 +60,7 @@ const kill = (state: GameState, kind: HitRecord['kind'], tree: Tree | null): voi
   state.combo = 0
   state.freeze = FREEZE_SECONDS
   state.shake = SHAKE_SECONDS
+  state.hitTree = tree
   state.lastHit = {
     kind,
     score: state.score,

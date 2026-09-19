@@ -67,6 +67,8 @@ export type GameState = {
   freeze: number
   shake: number
   lastHit: HitRecord | null
+  // The trunk that killed you, kept so the crash can be drawn with the ball buried behind it.
+  hitTree: Tree | null
   inspect: InspectState
   trees: Tree[]
   treeFrom: number
@@ -132,6 +134,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     freeze: 0,
     shake: 0,
     lastHit: null,
+    hitTree: null,
     inspect: { on: false, zoom: 8, panX: 0, panY: 0 },
     trees: course.trees,
     treeFrom: 0,
@@ -146,7 +149,9 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
   }
 }
 
-export const COUNTDOWN_SECONDS = 3
+// Three ticks, but shorter than a second each: the count-in is a beat, not a wait.
+export const COUNTDOWN_TICK_SECONDS = 0.55
+export const COUNTDOWN_SECONDS = COUNTDOWN_TICK_SECONDS * 3
 
 // Rebuilds the course from the level seed, so a retry is the exact same slope.
 export const startLevel = (state: GameState, levelIndex: number): void => {
@@ -188,6 +193,7 @@ export const resetRun = (state: GameState): void => {
   state.freeze = 0
   state.shake = 0
   state.lastHit = null
+  state.hitTree = null
   state.inspect.on = false
   state.inspect.panX = 0
   state.inspect.panY = 0

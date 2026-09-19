@@ -32,8 +32,8 @@ import { createTuningPanel } from './ui/sliders.ts'
 const MAX_FRAME_SECONDS = 1 / 30
 const TRAIL_POINT_SPACING = 8
 const TRAIL_TAIL_PX = 260
-// The count-in sits on -0.5 for half a second so "GO" is readable before the slope moves.
-const GO_HOLD_SECONDS = 0.5
+// "GO" holds just long enough to read before the slope moves.
+const GO_HOLD_SECONDS = 0.3
 
 const stage = document.querySelector<HTMLElement>('#stage')
 const canvas = document.querySelector<HTMLCanvasElement>('#game')

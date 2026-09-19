@@ -510,13 +510,14 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   for (const tree of visible) drawShadow(ctx, state.theme, tree.x, tree.y - camY, tree.radius)
 
   // Pines the ball has passed go under it; pines still ahead draw over it, so clipping a canopy
-  // reads as ducking under the branches rather than crashing.
+  // reads as ducking under the branches rather than crashing. The trunk you crashed into is the
+  // exception: it always draws over the ball, so the crash reads as hitting it, not landing on it.
   for (const tree of visible) {
-    if (tree.y <= state.y) drawTreeAt(ctx, state, tree, camY)
+    if (tree.y <= state.y && tree !== state.hitTree) drawTreeAt(ctx, state, tree, camY)
   }
   drawBall(ctx, state, camY)
   for (const tree of visible) {
-    if (tree.y > state.y) drawTreeAt(ctx, state, tree, camY)
+    if (tree.y > state.y || tree === state.hitTree) drawTreeAt(ctx, state, tree, camY)
   }
   drawRocks(ctx, state, camY)
   drawAvalanche(ctx, state, camY)

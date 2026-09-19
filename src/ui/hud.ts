@@ -1,5 +1,11 @@
 import { nextStarTarget, starsFor } from '../game/levels.ts'
-import { distanceLeftM, levelProgress, runOver, type GameState } from '../game/state.ts'
+import {
+  COUNTDOWN_TICK_SECONDS,
+  distanceLeftM,
+  levelProgress,
+  runOver,
+  type GameState,
+} from '../game/state.ts'
 import { applyGlass, applySolid, GLASS, PRESS, isDarkTheme, withAlpha } from './glass.ts'
 
 export type HudActions = {
@@ -49,21 +55,21 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   const root = document.createElement('div')
   root.className = 'pointer-events-none absolute inset-0 z-10'
 
-  // Pause: a small icon in the corner with a 44 px target around it.
+  // Out of the header's way and under the thumb that is already holding the phone.
   const pause = button(
     '❚❚',
-    `${GLASS} ${PRESS} pointer-events-auto absolute left-3 ` +
-      'top-[calc(env(safe-area-inset-top)+0.5rem)] flex h-11 w-11 items-center justify-center ' +
-      'rounded-full text-xs',
+    `${GLASS} ${PRESS} pointer-events-auto absolute right-4 ` +
+      'bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] flex h-11 w-11 items-center ' +
+      'justify-center rounded-full text-xs',
     actions.onPause,
   )
 
   const header = document.createElement('div')
   header.className =
-    'absolute inset-x-0 top-[calc(env(safe-area-inset-top)+3.5rem)] flex flex-col items-center'
+    'absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.4rem)] flex flex-col items-center px-3'
 
   const barRow = document.createElement('div')
-  barRow.className = `${GLASS} relative flex w-[86%] items-center gap-2 rounded-full p-1.5`
+  barRow.className = `${GLASS} relative flex w-full items-center gap-2 rounded-full p-1.5`
 
   const fromNode = document.createElement('div')
   fromNode.className =
@@ -82,17 +88,21 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
   barRow.append(fromNode, track, toNode)
 
-  // Rides the fill head, so the number is always where the progress is.
+  // A tooltip hanging off the fill head: the caret points at the exact spot you are on the piste.
   const badge = document.createElement('div')
   badge.className =
-    `${GLASS} absolute top-0 rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold tabular-nums`
+    `${GLASS} absolute top-1.5 z-10 whitespace-nowrap rounded-lg px-2 py-0.5 ` +
+    'text-[0.7rem] font-bold tabular-nums'
+
+  const badgeTail = document.createElement('div')
+  badgeTail.className = 'absolute top-[0.2rem] h-2.5 w-2.5 rounded-[2px] border-l border-t'
 
   const badgeRow = document.createElement('div')
-  badgeRow.className = 'relative mt-1.5 h-6 w-[74%]'
-  badgeRow.append(badge)
+  badgeRow.className = 'relative h-7 w-full'
+  badgeRow.append(badgeTail, badge)
 
   const scoreLine = document.createElement('div')
-  scoreLine.className = 'mt-6 text-5xl font-bold tabular-nums tracking-tight'
+  scoreLine.className = 'mt-4 text-5xl font-bold tabular-nums tracking-tight'
 
   const comboLine = document.createElement('div')
   comboLine.className = 'h-5 text-sm font-semibold tracking-wide'
@@ -189,9 +199,18 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       fill.style.background = `linear-gradient(90deg, ${withAlpha(theme.ink, 0.75)}, ${theme.ink})`
 
       badge.textContent = `${distanceLeftM(state)} m`
-      applyGlass(badge, theme)
+      applyGlass(badge, theme, { tint: theme.snow, alpha: dark ? 0.4 : 0.62 })
       badge.style.color = theme.ink
-      badge.style.left = `calc(${progress * 100}% - 1.5rem)`
+      // The head is inside the bar, so the tooltip is placed off the track's measured box.
+      const trackBox = track.getBoundingClientRect()
+      const rowBox = badgeRow.getBoundingClientRect()
+      const headX = trackBox.left - rowBox.left + progress * trackBox.width
+      badge.style.left = `${headX}px`
+      badge.style.transform = 'translateX(-50%)'
+      badgeTail.style.left = `${headX}px`
+      badgeTail.style.transform = 'translateX(-50%) rotate(45deg)'
+      badgeTail.style.background = withAlpha(theme.snow, dark ? 0.4 : 0.62)
+      badgeTail.style.borderColor = dark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.72)'
 
       scoreLine.textContent = String(state.score)
       scoreLine.style.color = theme.ball
@@ -212,8 +231,8 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       if (counting) {
         applyGlass(countdownDisc, theme, { elevated: true })
         countdownDisc.style.color = theme.ink
-        const seconds = Math.ceil(state.countdown)
-        const text = seconds > 0 ? String(seconds) : 'GO'
+        const tick = Math.ceil(state.countdown / COUNTDOWN_TICK_SECONDS)
+        const text = tick > 0 ? String(tick) : 'GO'
         if (countdownDisc.textContent !== text) {
           countdownDisc.textContent = text
           countdownDisc.animate(

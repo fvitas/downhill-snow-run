@@ -20,7 +20,8 @@ export type Chunk = {
   build: (ctx: ChunkContext) => ChunkResult
 }
 
-const MARGIN = 26
+export const TREE_MARGIN = 26
+const MARGIN = TREE_MARGIN
 const RADIUS_MIN = 10
 const RADIUS_MAX = 19
 const ROW_SPACING = 52
@@ -35,6 +36,20 @@ const treeAt = (rng: Rng, x: number, y: number): ChunkTree => ({
   radius: rngRange(rng, RADIUS_MIN, RADIUS_MAX),
 })
 
+// Every placement is nudged: a pattern drawn on exact coordinates reads as furniture, not forest.
+const treeNear = (rng: Rng, x: number, y: number, jx: number, jy = jx): ChunkTree =>
+  treeAt(rng, x + rngRange(rng, -jx, jx), y + rngRange(rng, -jy, jy))
+
+// A second trunk leaning away from the middle: clumps look grown, and never narrow the racing line.
+const maybeClump = (out: ChunkTree[], rng: Rng, tree: ChunkTree, chance: number): void => {
+  if (rng() > chance) return
+  const outward = tree.x < LOGICAL_WIDTH / 2 ? -1 : 1
+  const distance = tree.radius + rngRange(rng, 8, 20)
+  const x = tree.x + outward * distance
+  if (x < MARGIN || x > LOGICAL_WIDTH - MARGIN) return
+  out.push(treeAt(rng, x, tree.y + rngRange(rng, -16, 16)))
+}
+
 // A row spanning the slope with one lane left open — the only way through is the hole.
 const wallRow = (out: ChunkTree[], rng: Rng, y: number, laneX: number, gap: number): void => {
   for (let x = MARGIN; x <= LOGICAL_WIDTH - MARGIN; x += ROW_SPACING) {
@@ -44,8 +59,13 @@ const wallRow = (out: ChunkTree[], rng: Rng, y: number, laneX: number, gap: numb
 }
 
 const gatePair = (out: ChunkTree[], rng: Rng, y: number, laneX: number, gap: number): void => {
-  out.push(treeAt(rng, clampLane(laneX, gap) - gap / 2, y))
-  out.push(treeAt(rng, clampLane(laneX, gap) + gap / 2, y + rngRange(rng, -8, 8)))
+  const lane = clampLane(laneX, gap)
+  // Jitter goes outward only, so a nudged post never eats into the gap you have to thread.
+  const left = treeAt(rng, lane - gap / 2 - rngRange(rng, 0, 10), y + rngRange(rng, -10, 10))
+  const right = treeAt(rng, lane + gap / 2 + rngRange(rng, 0, 10), y + rngRange(rng, -10, 10))
+  out.push(left, right)
+  maybeClump(out, rng, left, 0.3)
+  maybeClump(out, rng, right, 0.3)
 }
 
 // Loose trees with no pattern — the breather between the shaped chunks.
@@ -62,7 +82,10 @@ const scatter: Chunk = {
       const x = rngRange(rng, MARGIN, LOGICAL_WIDTH - MARGIN)
       // Keep a corridor of `gap` around every earlier tree at a similar height.
       const blocked = trees.some((tree) => Math.abs(tree.y - y) < 70 && Math.abs(tree.x - x) < gap)
-      if (!blocked) trees.push(treeAt(rng, x, y))
+      if (blocked) continue
+      const tree = treeAt(rng, x, y)
+      trees.push(tree)
+      maybeClump(trees, rng, tree, 0.35)
     }
     return { trees, length }
   },
@@ -79,11 +102,17 @@ const slalom: Chunk = {
     const offset = rngRange(rng, 62, 118)
     const side = rng() < 0.5 ? -1 : 1
     const trees: ChunkTree[] = []
+    let y = 0
     for (let i = 0; i < gates; i += 1) {
-      const x = LOGICAL_WIDTH / 2 + (i % 2 === 0 ? side : -side) * offset
-      trees.push(treeAt(rng, x, i * step))
+      // The rhythm breathes: each post sits its own distance out and its own distance down.
+      const swing = offset * rngRange(rng, 0.78, 1.25)
+      const x = LOGICAL_WIDTH / 2 + (i % 2 === 0 ? side : -side) * swing
+      const tree = treeNear(rng, clampLane(x, 0), y, 12, 10)
+      trees.push(tree)
+      maybeClump(trees, rng, tree, 0.4)
+      y += step * rngRange(rng, 0.8, 1.25)
     }
-    return { trees, length: gates * step }
+    return { trees, length: y }
   },
 }
 
@@ -98,10 +127,13 @@ const gates: Chunk = {
     const drift = rngRange(rng, -110, 110)
     const start = rngRange(rng, MARGIN + gap, LOGICAL_WIDTH - MARGIN - gap)
     const trees: ChunkTree[] = []
+    let y = 0
     for (let i = 0; i < count; i += 1) {
-      gatePair(trees, rng, i * step, start + (drift * i) / count, gap * 1.15)
+      const lane = start + (drift * i) / count + rngRange(rng, -26, 26)
+      gatePair(trees, rng, y, lane, gap * rngRange(rng, 1.05, 1.35))
+      y += step * rngRange(rng, 0.85, 1.2)
     }
-    return { trees, length: count * step }
+    return { trees, length: y }
   },
 }
 
@@ -117,8 +149,10 @@ const funnel: Chunk = {
     const trees: ChunkTree[] = []
     for (let i = 0; i < rows; i += 1) {
       const half = lerp(LOGICAL_WIDTH * 0.46, gap / 2, i / (rows - 1))
-      trees.push(treeAt(rng, clampLane(lane, half * 2) - half, i * step))
-      trees.push(treeAt(rng, clampLane(lane, half * 2) + half, i * step))
+      const centre = clampLane(lane, half * 2)
+      const y = i * step * rngRange(rng, 0.9, 1.1)
+      trees.push(treeNear(rng, centre - half - rngRange(rng, 0, 9), y, 0, 12))
+      trees.push(treeNear(rng, centre + half + rngRange(rng, 0, 9), y, 0, 12))
     }
     return { trees, length: rows * step + 120 }
   },
@@ -139,8 +173,11 @@ const corridor: Chunk = {
     const trees: ChunkTree[] = []
     for (let y = 0; y < length; y += step) {
       const lane = clampLane(LOGICAL_WIDTH / 2 + Math.sin(phase + y / period) * amplitude, width)
-      trees.push(treeAt(rng, lane - width / 2, y))
-      trees.push(treeAt(rng, lane + width / 2, y + step / 2))
+      const left = treeNear(rng, lane - width / 2 - rngRange(rng, 0, 12), y, 0, 14)
+      const right = treeNear(rng, lane + width / 2 + rngRange(rng, 0, 12), y + step / 2, 0, 14)
+      trees.push(left, right)
+      maybeClump(trees, rng, left, 0.25)
+      maybeClump(trees, rng, right, 0.25)
     }
     return { trees, length }
   },
@@ -195,8 +232,8 @@ const crossing: Chunk = {
       const right = lerp(LOGICAL_WIDTH - MARGIN, MARGIN, t)
       // The strands are skipped where they meet, which is the gap you aim for.
       if (Math.abs(left - right) > gap) {
-        trees.push(treeAt(rng, left, y))
-        trees.push(treeAt(rng, right, y))
+        trees.push(treeNear(rng, left, y, 9, 14))
+        trees.push(treeNear(rng, right, y, 9, 14))
       }
     }
     return { trees, length }
@@ -219,8 +256,11 @@ const avenue: Chunk = {
     const trees: ChunkTree[] = []
     for (let y = 0; y < length; y += step) {
       const lane = clampLane(LOGICAL_WIDTH / 2 + Math.sin(phase + y / period) * amplitude, width)
-      trees.push(treeAt(rng, lane - width / 2 + rngRange(rng, -8, 8), y))
-      trees.push(treeAt(rng, lane + width / 2 + rngRange(rng, -8, 8), y + step / 2))
+      const left = treeNear(rng, lane - width / 2, y, 10, 16)
+      const right = treeNear(rng, lane + width / 2, y + step / 2, 10, 16)
+      trees.push(left, right)
+      maybeClump(trees, rng, left, 0.45)
+      maybeClump(trees, rng, right, 0.45)
     }
     return { trees, length }
   },

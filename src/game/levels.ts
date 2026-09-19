@@ -1,5 +1,5 @@
-import { pickChunk, type ChunkTree } from './chunks.ts'
-import { createRng, hashSeed, rngRange, type Rng } from './rng.ts'
+import { pickChunk, TREE_MARGIN, type ChunkTree } from './chunks.ts'
+import { createRng, hashSeed, rngInt, rngPick, rngRange, type Rng } from './rng.ts'
 import { PIXELS_PER_METRE, type Collectible, type Rock, type Tree } from './world.ts'
 import { themeForWorld, type Theme } from './themes.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
@@ -97,6 +97,48 @@ const toTree = (rng: Rng, chunkTree: ChunkTree, offsetY: number): Tree => ({
   grazed: false,
 })
 
+const STRAY_BAND_PX = 74
+const STRAY_SPACING_PX = 250
+
+// The widest way through the band around `y`, counting the screen edges as walls.
+const widestLanePx = (trees: Tree[], y: number, candidateX: number): number => {
+  const xs = [candidateX]
+  for (const tree of trees) {
+    if (Math.abs(tree.y - y) < STRAY_BAND_PX) xs.push(tree.x)
+  }
+  xs.sort((a, b) => a - b)
+
+  let widest = 0
+  let previous = 0
+  for (const x of xs) {
+    widest = Math.max(widest, x - previous)
+    previous = x
+  }
+  return Math.max(widest, LOGICAL_WIDTH - previous)
+}
+
+// Loose trees dropped into the space the chunks leave empty, so the slope reads as forest rather
+// than as a sequence of drawn shapes. One is only kept if a lane wide enough survives it.
+const addStrays = (rng: Rng, trees: Tree[], lengthPx: number, gap: number): void => {
+  for (let y = RUN_IN_PX; y < lengthPx - RUN_OUT_PX; y += STRAY_SPACING_PX) {
+    const attempts = rngInt(rng, 1, 3)
+    for (let i = 0; i < attempts; i += 1) {
+      const strayY = y + rngRange(rng, 0, STRAY_SPACING_PX)
+      const strayX = rngRange(rng, TREE_MARGIN, LOGICAL_WIDTH - TREE_MARGIN)
+      if (strayY > lengthPx - RUN_OUT_PX) continue
+      if (widestLanePx(trees, strayY, strayX) < gap) continue
+      trees.push({
+        x: strayX,
+        y: strayY,
+        radius: rngRange(rng, 9, 17),
+        rotation: rng() * Math.PI * 2,
+        shade: rng(),
+        grazed: false,
+      })
+    }
+  }
+}
+
 const buildTreeCourse = (level: Level, lengthPx: number): Tree[] => {
   const rng = createRng(level.seed)
   const trees: Tree[] = []
@@ -119,36 +161,118 @@ const buildTreeCourse = (level: Level, lengthPx: number): Tree[] => {
     previous = chunk.name
   }
 
+  addStrays(rng, trees, lengthPx, level.minGapPx)
   return trees.sort((a, b) => a.y - b.y)
 }
 
-const COIN_SPACING = 58
-const DIAMOND_INSET = 52
+const COIN_EDGE = 46
+const CENTRE_X = LOGICAL_WIDTH / 2
 
-// Bonus runs: long sweeping lines of coins, with the diamonds parked out near the walls.
+const clampCoinX = (x: number): number =>
+  Math.min(LOGICAL_WIDTH - COIN_EDGE, Math.max(COIN_EDGE, x))
+
+const putCoin = (out: Collectible[], x: number, y: number): void => {
+  out.push({ x: clampCoinX(x), y, kind: 'coin', taken: false })
+}
+
+const putDiamond = (out: Collectible[], x: number, y: number): void => {
+  out.push({ x: clampCoinX(x), y, kind: 'diamond', taken: false })
+}
+
+type CoinSegment = (rng: Rng, out: Collectible[], top: number, length: number) => void
+
+// A sweeping line you ride, with the odd diamond parked across the slope from its peak.
+const coinWave: CoinSegment = (rng, out, top, length) => {
+  const amplitude = rngRange(rng, 80, 200)
+  const period = rngRange(rng, 300, 640)
+  const phase = rngRange(rng, 0, Math.PI * 2)
+  const spacing = rngRange(rng, 46, 70)
+  for (let y = top; y < top + length; y += spacing) {
+    const wave = Math.sin(phase + y / period)
+    putCoin(out, CENTRE_X + wave * amplitude, y)
+    if (Math.abs(wave) > 0.95 && rng() < 0.6) {
+      putDiamond(out, CENTRE_X - Math.sign(wave) * (CENTRE_X - COIN_EDGE), y)
+    }
+  }
+}
+
+// Straight legs across the slope: you commit to a line, then flip at the corner.
+const coinZigzag: CoinSegment = (rng, out, top, length) => {
+  const spacing = rngRange(rng, 44, 62)
+  const legLength = rngRange(rng, 200, 340)
+  const inset = rngRange(rng, COIN_EDGE, 150)
+  let side = rng() < 0.5 ? -1 : 1
+  let y = top
+  while (y < top + length) {
+    const from = CENTRE_X - side * (CENTRE_X - inset)
+    const to = CENTRE_X + side * (CENTRE_X - inset)
+    const legEnd = Math.min(y + legLength, top + length)
+    for (let cursor = y; cursor < legEnd; cursor += spacing) {
+      putCoin(out, from + (to - from) * ((cursor - y) / legLength), cursor)
+    }
+    // The corner overshoots into a diamond: worth one extra flick if you are greedy.
+    if (rng() < 0.45) putDiamond(out, to + side * 40, legEnd)
+    side *= -1
+    y = legEnd
+  }
+}
+
+// A pocket: rings of coins around a diamond, far enough off the line to be a choice.
+const coinCluster: CoinSegment = (rng, out, top, length) => {
+  const pockets = rngInt(rng, 1, 3)
+  for (let i = 0; i < pockets; i += 1) {
+    const centreX = rngRange(rng, COIN_EDGE + 40, LOGICAL_WIDTH - COIN_EDGE - 40)
+    const centreY = top + (length * (i + 0.5)) / pockets + rngRange(rng, -60, 60)
+    const radius = rngRange(rng, 52, 84)
+    const count = rngInt(rng, 7, 11)
+    const spin = rngRange(rng, 0, Math.PI * 2)
+    for (let k = 0; k < count; k += 1) {
+      const angle = spin + (k / count) * Math.PI * 2
+      putCoin(out, centreX + Math.cos(angle) * radius, centreY + Math.sin(angle) * radius * 1.3)
+    }
+    putDiamond(out, centreX, centreY)
+  }
+}
+
+// A rest: coins hugging one wall, diamonds strung along the other one.
+const coinLane: CoinSegment = (rng, out, top, length) => {
+  const side = rng() < 0.5 ? -1 : 1
+  const lane = CENTRE_X + side * rngRange(rng, 90, CENTRE_X - COIN_EDGE)
+  const spacing = rngRange(rng, 44, 58)
+  const drift = rngRange(rng, -50, 50)
+  for (let y = top; y < top + length; y += spacing) {
+    putCoin(out, lane + (drift * (y - top)) / length, y)
+  }
+  const diamonds = rngInt(rng, 1, 3)
+  for (let i = 0; i < diamonds; i += 1) {
+    putDiamond(out, CENTRE_X - side * (CENTRE_X - COIN_EDGE), top + (length * (i + 0.5)) / diamonds)
+  }
+}
+
+const COIN_SEGMENTS: readonly CoinSegment[] = [
+  coinWave,
+  coinWave,
+  coinZigzag,
+  coinZigzag,
+  coinCluster,
+  coinLane,
+]
+
+// Bonus runs are stitched from segments, so no two coin levels read as the same wave.
 const buildCoinCourse = (level: Level, lengthPx: number): Collectible[] => {
   const rng = createRng(level.seed ^ 0x9e37)
   const collectibles: Collectible[] = []
-  const amplitude = rngRange(rng, 120, 190)
-  const period = rngRange(rng, 420, 620)
-  const phase = rngRange(rng, 0, Math.PI * 2)
+  const end = lengthPx - RUN_OUT_PX
+  let cursor = RUN_IN_PX
 
-  for (let y = RUN_IN_PX; y < lengthPx - RUN_OUT_PX; y += COIN_SPACING) {
-    const x = LOGICAL_WIDTH / 2 + Math.sin(phase + y / period) * amplitude
-    collectibles.push({ x, y, kind: 'coin', taken: false })
-    // Diamonds sit on the far side of the wave, so taking one costs you the next few coins.
-    if (Math.abs(Math.sin(phase + y / period)) > 0.96) {
-      const side = x > LOGICAL_WIDTH / 2 ? -1 : 1
-      collectibles.push({
-        x: LOGICAL_WIDTH / 2 - (side * LOGICAL_WIDTH) / 2 + side * DIAMOND_INSET,
-        y,
-        kind: 'diamond',
-        taken: false,
-      })
-    }
+  while (cursor < end) {
+    const segment = rngPick(rng, COIN_SEGMENTS)
+    const length = Math.min(rngRange(rng, 420, 820), end - cursor)
+    segment(rng, collectibles, cursor, length)
+    cursor += length + rngRange(rng, 70, 170)
   }
 
-  return collectibles
+  return collectibles.sort((a, b) => a.y - b.y)
 }
 
 // Rocks arrive once the slope is busy enough to be read at a glance, and only on tree levels.
