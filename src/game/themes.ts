@@ -13,22 +13,28 @@ export type Theme = {
   ink: string
 }
 
+const PINE_VALLEY: Theme = {
+  name: 'Pine Valley',
+  snow: '#fdfeff',
+  trail: '#e9f2fd',
+  treeDark: '#2f4f43',
+  treeLight: '#4c6a5c',
+  trunkDark: '#63452c',
+  trunkLight: '#7a5638',
+  shadow: 'rgba(92, 122, 162, 0.14)',
+  cast: 'rgba(8, 30, 62, 0.28)',
+  ball: '#ff7a2f',
+  ballEdge: '#d95d17',
+  ink: '#0b2b5e',
+}
+
+// The slope re-themes per world; the chrome on top of it does not. Every panel, chip and button
+// stays on world one's palette, so the same control reads the same way in every world.
+export const UI_THEME = PINE_VALLEY
+
 // Locked to worlds in order, picked from mockups/worlds.html. Worlds past the sixth cycle back.
 export const THEMES: readonly Theme[] = [
-  {
-    name: 'Pine Valley',
-    snow: '#faf7f0',
-    trail: '#f0e5bd',
-    treeDark: '#2f4f43',
-    treeLight: '#4c6a5c',
-    trunkDark: '#63452c',
-    trunkLight: '#7a5638',
-    shadow: 'rgba(122, 120, 114, 0.16)',
-    cast: 'rgba(18, 40, 34, 0.3)',
-    ball: '#f5a623',
-    ballEdge: '#d98a10',
-    ink: '#2f4f43',
-  },
+  PINE_VALLEY,
   {
     name: 'Sunset Ridge',
     snow: '#f7c85a',
@@ -101,7 +107,26 @@ export const THEMES: readonly Theme[] = [
   },
 ]
 
+// Read once at load: mockups/picker.html writes a candidate world-one theme here, so colours can
+// be judged in the running game. Clear the key (or the picker's Clear button) to go back.
+const readOverride = (): Theme | null => {
+  try {
+    const stored = localStorage.getItem('ski:theme1')
+    return stored ? (JSON.parse(stored) as Theme) : null
+  } catch {
+    return null
+  }
+}
+
+let overrideTheme = import.meta.env.DEV ? readOverride() : null
+
+// mockups/picker.tsx repaints world one as the wheel is dragged, without a reload.
+export const setThemeOverride = (theme: Theme | null): void => {
+  overrideTheme = theme
+}
+
 export const themeForWorld = (world: number): Theme => {
+  if (world === 1 && overrideTheme) return overrideTheme
   const theme = THEMES[(world - 1) % THEMES.length]
   if (!theme) throw new Error('no themes defined')
   return theme

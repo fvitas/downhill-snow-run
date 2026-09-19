@@ -47,10 +47,11 @@ export const applyGlass = (element: HTMLElement, theme: Theme, options: GlassOpt
     : '0 8px 20px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5)'
 }
 
-// A filled control still gets the glass treatment: a gloss over a solid colour.
+// A filled control is flat: no bright top edge, no white rim — on dark ink both read as a stray
+// highlight. All it keeps is a drop shadow in its own colour.
 export const applySolid = (element: HTMLElement, fill: string, ink: string): void => {
   element.style.background = fill
   element.style.color = ink
-  element.style.borderColor = 'rgba(255, 255, 255, 0.35)'
-  element.style.boxShadow = `0 10px 24px ${withAlpha(fill, 0.45)}, inset 0 1px 0 rgba(255, 255, 255, 0.45)`
+  element.style.borderColor = 'transparent'
+  element.style.boxShadow = `0 8px 18px ${withAlpha(fill, 0.2)}`
 }

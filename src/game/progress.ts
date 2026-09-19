@@ -2,7 +2,8 @@ import { LEVEL_COUNT } from './levels.ts'
 
 const PROGRESS_KEY = 'ski:progress:v1'
 
-export type LevelRecord = { stars: number; score: number }
+// `reach` is the furthest a *failed* attempt got, 0–1. Clearing the level wipes it for good.
+export type LevelRecord = { stars: number; score: number; reach: number }
 
 export type Progress = {
   levels: Record<number, LevelRecord>
@@ -33,6 +34,7 @@ export const loadProgress = (): Progress => {
         levels[index] = {
           stars: Math.min(3, Math.max(0, Math.round(numberOr(value.stars, 0)))),
           score: Math.max(0, Math.round(numberOr(value.score, 0))),
+          reach: Math.min(1, Math.max(0, numberOr(value.reach, 0))),
         }
       }
     }
@@ -57,7 +59,17 @@ export const saveProgress = (progress: Progress): void => {
 }
 
 export const recordOf = (progress: Progress, index: number): LevelRecord =>
-  progress.levels[index] ?? { stars: 0, score: 0 }
+  progress.levels[index] ?? { stars: 0, score: 0, reach: 0 }
+
+// Where the run that just ended died, kept for the next attempt's ghost. Two rules: a cleared
+// level never carries a mark, and a worse run never lowers one. Returns `progress` untouched when
+// neither applies, so the caller can skip the write.
+export const recordReach = (progress: Progress, index: number, reach: number): Progress => {
+  if (progress.unlocked > index) return progress
+  const previous = recordOf(progress, index)
+  if (reach <= previous.reach) return progress
+  return { ...progress, levels: { ...progress.levels, [index]: { ...previous, reach } } }
+}
 
 // Only ever improves a level's row, so replaying a cleared level can't cost you stars.
 export const recordRun = (
@@ -71,7 +83,12 @@ export const recordRun = (
     ...progress,
     levels: {
       ...progress.levels,
-      [index]: { stars: Math.max(previous.stars, stars), score: Math.max(previous.score, score) },
+      // Reaching the tape clears the ghost: there is nothing left to beat on this level.
+      [index]: {
+        stars: Math.max(previous.stars, stars),
+        score: Math.max(previous.score, score),
+        reach: 0,
+      },
     },
     unlocked: Math.min(LEVEL_COUNT, Math.max(progress.unlocked, index + 1)),
   }

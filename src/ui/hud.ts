@@ -1,11 +1,6 @@
 import { nextStarTarget, starsFor } from '../game/levels.ts'
-import {
-  COUNTDOWN_TICK_SECONDS,
-  distanceLeftM,
-  levelProgress,
-  runOver,
-  type GameState,
-} from '../game/state.ts'
+import { COUNTDOWN_TICK_SECONDS, levelProgress, runOver, type GameState } from '../game/state.ts'
+import { UI_THEME } from '../game/themes.ts'
 import { applyGlass, applySolid, GLASS, PRESS, isDarkTheme, withAlpha } from './glass.ts'
 
 export type HudActions = {
@@ -22,6 +17,14 @@ export type Hud = {
 }
 
 const PRAISE = ['Nice!', 'Smooth!', 'Exquisite!', "You're on fire!"]
+
+// Lucide's `pause`, inlined — one icon does not justify the dependency. Solid bars, not the
+// stroked default, so it still reads at arm's length on the slope.
+const PAUSE_ICON =
+  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-6 w-6">' +
+  '<rect x="14" y="3" width="4" height="18" rx="1.5" />' +
+  '<rect x="6" y="3" width="4" height="18" rx="1.5" />' +
+  '</svg>'
 
 const praiseFor = (combo: number): string => {
   const index = Math.min(PRAISE.length - 1, Math.floor((combo - 2) / 2))
@@ -57,48 +60,69 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
   // Out of the header's way and under the thumb that is already holding the phone.
   const pause = button(
-    '❚❚',
+    '',
     `${GLASS} ${PRESS} pointer-events-auto absolute right-4 ` +
       'bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] flex h-11 w-11 items-center ' +
-      'justify-center rounded-full text-xs',
+      'justify-center rounded-full',
     actions.onPause,
   )
+  pause.innerHTML = PAUSE_ICON
 
   const header = document.createElement('div')
   header.className =
     'absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.4rem)] flex flex-col items-center px-3'
 
   const barRow = document.createElement('div')
-  barRow.className = `${GLASS} relative flex w-full items-center gap-2 rounded-full p-1.5`
+  barRow.className = `${GLASS} relative flex w-1/2 items-center gap-1.5 rounded-full p-1`
 
   const fromNode = document.createElement('div')
   fromNode.className =
-    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold'
+    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold'
 
   const toNode = document.createElement('div')
   toNode.className =
-    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold'
+    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold'
 
   const track = document.createElement('div')
-  track.className = 'relative h-2.5 grow overflow-hidden rounded-full'
+  track.className = 'relative h-1.5 grow overflow-hidden rounded-full'
+
+  // How far the best failed attempt got. Appended first so the live fill paints straight over it.
+  const ghost = document.createElement('div')
+  ghost.className = 'absolute inset-y-0 left-0 rounded-full'
 
   const fill = document.createElement('div')
   fill.className = 'absolute inset-y-0 left-0 rounded-full transition-[width] duration-100'
-  track.append(fill)
+  track.append(ghost, fill)
 
   barRow.append(fromNode, track, toNode)
 
   // A tooltip hanging off the fill head: the caret points at the exact spot you are on the piste.
   const badge = document.createElement('div')
   badge.className =
-    `${GLASS} absolute top-1.5 z-10 whitespace-nowrap rounded-lg px-2 py-0.5 ` +
-    'text-[0.7rem] font-bold tabular-nums'
+    `${GLASS} absolute top-1.5 z-10 whitespace-nowrap rounded-md px-1.5 py-0.5 ` +
+    'text-[0.65rem] font-bold tabular-nums'
 
+  // Same material as the badge. Only its top-left half is exposed — the badge covers the rest —
+  // so the two borders that draw the point are the only ones that read.
   const badgeTail = document.createElement('div')
-  badgeTail.className = 'absolute top-[0.2rem] h-2.5 w-2.5 rounded-[2px] border-l border-t'
+  badgeTail.className = `${GLASS} absolute top-[0.15rem] h-2 w-2 rounded-[2px] border-l border-t`
+
+  // The ghost's own tooltip: same pill, muted and caret-less, so the live one always wins. It
+  // rides above the bar while the live one hangs below, so the two can never collide.
+  const ghostBadge = document.createElement('div')
+  // Tucked down into the panel; z-10 keeps it above the glass, which is painted after it.
+  ghostBadge.className =
+    'absolute -bottom-[1.125rem] z-10 whitespace-nowrap px-1.5 py-0.5 text-[0.6rem] ' +
+    'font-bold tabular-nums'
+
+  const ghostRow = document.createElement('div')
+  ghostRow.className = 'relative h-5 w-full'
+  ghostRow.append(ghostBadge)
 
   const badgeRow = document.createElement('div')
-  badgeRow.className = 'relative h-7 w-full'
+  // No upward offset: the caret has only ~2px of clearance under the pill, and tucking the row up
+  // buries it behind the panel.
+  badgeRow.className = 'relative h-6 w-full'
   badgeRow.append(badgeTail, badge)
 
   const scoreLine = document.createElement('div')
@@ -107,7 +131,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   const comboLine = document.createElement('div')
   comboLine.className = 'h-5 text-sm font-semibold tracking-wide'
 
-  header.append(barRow, badgeRow, scoreLine, comboLine)
+  header.append(ghostRow, barRow, badgeRow, scoreLine, comboLine)
 
   // The scene freezes behind the sheet and is blurred out, so the card owns the screen.
   const card = document.createElement('div')
@@ -143,9 +167,11 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       else actions.onRetry()
     },
   )
+  // The Snow secondary: same box as the primary — padding, text size and the 1px rim all match,
+  // so only the fill and the weight separate them.
   const crashSite = button(
     'Crash site',
-    `${GLASS} ${PRESS} relative rounded-2xl px-4 py-2.5 text-sm font-semibold`,
+    `${PRESS} relative rounded-2xl border px-4 py-3.5 text-base font-semibold`,
     actions.onCrashSite,
   )
   const menu = button(
@@ -163,7 +189,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
   const countdownDisc = document.createElement('div')
   countdownDisc.className =
-    `${GLASS} relative flex h-36 w-36 items-center justify-center rounded-full text-7xl font-bold`
+    `${GLASS} relative flex h-36 w-36 items-center justify-center rounded-full font-bold`
   countdown.append(countdownDisc)
 
   root.append(pause, header, countdown, card)
@@ -174,7 +200,12 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   return {
     root,
     update: () => {
-      const { theme, level } = state
+      const { level } = state
+      // Fixed chrome: every panel, chip and button stays on world one's palette. Only the two
+      // lines that sit on bare slope keep the world's own colours, because they have nothing
+      // behind them to read against.
+      const theme = UI_THEME
+      const world = state.theme
       const dark = isDarkTheme(theme)
       // The card waits out the impact hold, so the crash is seen before it is judged.
       const showCard = runOver(state) && !state.inspect.on && state.freeze <= 0
@@ -195,26 +226,45 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
       track.style.background = withAlpha(theme.ink, dark ? 0.25 : 0.14)
       const progress = levelProgress(state)
+      // The head is inside the bar, so the tooltips are placed off the track's own offsets —
+      // layout px, so a CSS transform on the stage cannot skew them.
+      const headXAt = (fraction: number, row: HTMLElement): number =>
+        barRow.offsetLeft + track.offsetLeft - row.offsetLeft + fraction * track.offsetWidth
       fill.style.width = `${progress * 100}%`
       fill.style.background = `linear-gradient(90deg, ${withAlpha(theme.ink, 0.75)}, ${theme.ink})`
 
-      badge.textContent = `${distanceLeftM(state)} m`
+      // The ghost only lives until the live fill draws level with it — past that there is nothing
+      // left to chase, and a mark behind you is just clutter.
+      const ghostOn = state.bestReach > 0 && progress < state.bestReach
+      ghost.style.display = ghostOn ? 'block' : 'none'
+      ghostBadge.style.display = ghostOn ? 'block' : 'none'
+      if (ghostOn) {
+        ghost.style.width = `${state.bestReach * 100}%`
+        ghost.style.background = withAlpha(theme.ink, dark ? 0.4 : 0.3)
+        ghostBadge.textContent = `${Math.round(state.bestReach * 100)}%`
+        ghostBadge.style.color = withAlpha(theme.ink, 0.45)
+        ghostBadge.style.left = `${headXAt(state.bestReach, ghostRow)}px`
+        ghostBadge.style.transform = 'translateX(calc(-50% + 4px))'
+      }
+
+      badge.textContent = `${Math.round(progress * 100)}%`
       applyGlass(badge, theme, { tint: theme.snow, alpha: dark ? 0.4 : 0.62 })
       badge.style.color = theme.ink
-      // The head is inside the bar, so the tooltip is placed off the track's measured box.
-      const trackBox = track.getBoundingClientRect()
-      const rowBox = badgeRow.getBoundingClientRect()
-      const headX = trackBox.left - rowBox.left + progress * trackBox.width
+      const headX = headXAt(progress, badgeRow)
       badge.style.left = `${headX}px`
       badge.style.transform = 'translateX(-50%)'
       badgeTail.style.left = `${headX}px`
       badgeTail.style.transform = 'translateX(-50%) rotate(45deg)'
-      badgeTail.style.background = withAlpha(theme.snow, dark ? 0.4 : 0.62)
-      badgeTail.style.borderColor = dark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.72)'
+      applyGlass(badgeTail, theme, { tint: theme.snow, alpha: dark ? 0.4 : 0.62 })
+      badgeTail.style.boxShadow = 'none'
+      // The chips sit inside the pill, where their own drop reads as a blue glow trapped in it.
+      // The tooltip hangs below it, so it gets a shallow one to lift it off the slope.
+      for (const node of [fromNode, toNode]) node.style.boxShadow = 'none'
+      badge.style.boxShadow = `0 2px 5px ${withAlpha(theme.ink, dark ? 0.3 : 0.14)}`
 
       scoreLine.textContent = String(state.score)
-      scoreLine.style.color = theme.ball
-      scoreLine.style.textShadow = `0 4px 18px ${withAlpha(theme.ball, 0.45)}`
+      scoreLine.style.color = world.ball
+      scoreLine.style.textShadow = `0 2px 10px ${withAlpha(world.ball, 0.22)}`
       // The number kicks on every tick, the way the original's does.
       if (state.score !== lastScore) {
         scoreLine.animate(
@@ -225,7 +275,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       }
 
       comboLine.textContent = state.combo > 1 ? `${praiseFor(state.combo)} ×${state.combo}` : ''
-      comboLine.style.color = theme.ink
+      comboLine.style.color = world.ink
 
       countdown.style.display = counting ? 'flex' : 'none'
       if (counting) {
@@ -235,6 +285,9 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
         const text = tick > 0 ? String(tick) : 'GO'
         if (countdownDisc.textContent !== text) {
           countdownDisc.textContent = text
+          // GO is two glyphs wide; at the digits' size it crowds the disc's rim.
+          countdownDisc.classList.toggle('text-5xl', text === 'GO')
+          countdownDisc.classList.toggle('text-7xl', text !== 'GO')
           countdownDisc.animate(
             [
               { transform: 'scale(0.82)', opacity: 0.4 },
@@ -269,12 +322,16 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       title.textContent = state.finished ? (level.bonus ? 'COLLECTED' : 'FINISH') : crashTitle
       finalScore.textContent = String(state.score)
       finalScore.style.color = theme.ball
-      finalScore.style.textShadow = `0 4px 18px ${withAlpha(theme.ball, 0.4)}`
+      finalScore.style.textShadow = `0 2px 10px ${withAlpha(theme.ball, 0.2)}`
       applySolid(primary, theme.ink, theme.snow)
       primary.textContent = state.finished ? 'Next level' : 'Retry'
-      applyGlass(crashSite, theme, { tint: theme.trail, alpha: dark ? 0.5 : 0.8 })
+      crashSite.style.background = theme.snow
+      crashSite.style.borderColor = 'transparent'
       crashSite.style.color = theme.ink
-      crashSite.style.display = state.finished ? 'none' : 'block'
+      crashSite.style.boxShadow = `0 6px 16px ${withAlpha(theme.ink, 0.16)}`
+      // A wall hit has no obstacle to inspect — the inspector would open on bare piste.
+      const inspectable = !state.finished && state.lastHit?.kind !== 'wall'
+      crashSite.style.display = inspectable ? 'block' : 'none'
       menu.style.color = theme.ink
 
       stars.replaceChildren()

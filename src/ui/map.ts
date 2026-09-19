@@ -6,13 +6,15 @@ import {
 } from '../game/levels.ts'
 import { recordOf, totalStars, type Progress } from '../game/progress.ts'
 import { createRng, hashSeed, rngInt, rngRange, type Rng } from '../game/rng.ts'
-import { themeForWorld, type Theme } from '../game/themes.ts'
+import { themeForWorld, UI_THEME, type Theme } from '../game/themes.ts'
 import { applyGlass, applySolid, GLASS, PRESS, isDarkTheme, withAlpha } from './glass.ts'
 
 export type LevelMap = {
   root: HTMLElement
   show: (progress: Progress, focusLevel: number) => void
   hide: () => void
+  // Same world, same scroll position, fresh colours — for a live theme edit or a resize.
+  redraw: () => void
 }
 
 const NODE_STEP = 112
@@ -90,7 +92,7 @@ const addContours = (scene: SVGElement, width: number, theme: Theme, world: numb
       svg('path', {
         d: `M -10 ${y} Q ${width * 0.3} ${y + sag} ${width * 0.55} ${y} T ${width + 10} ${y - sag * 0.4}`,
         fill: 'none',
-        stroke: withAlpha(theme.ink, 0.11),
+        stroke: withAlpha(theme.ink, 0.08),
         'stroke-width': 1,
       }),
     )
@@ -213,7 +215,7 @@ const addLandmarks = (scene: SVGElement, width: number, theme: Theme, world: num
     d:
       `M ${peakX - 150} 96 L ${peakX - 66} 22 L ${peakX - 14} 70 L ${peakX + 40} 10 ` +
       `L ${peakX + 96} 68 L ${peakX + 168} 96 Z`,
-    fill: withAlpha(theme.ink, 0.16),
+    fill: withAlpha(theme.ink, 0.1),
   })
   const cap = svg('path', {
     d: `M ${peakX + 12} 42 L ${peakX + 40} 10 L ${peakX + 70} 44 L ${peakX + 48} 36 ` +
@@ -355,7 +357,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
         y: 0,
         width,
         height: CONTENT_HEIGHT,
-        fill: withAlpha(theme.ink, dark ? 0.22 : 0.09),
+        fill: withAlpha(theme.ink, dark ? 0.22 : 0.05),
       }),
     )
 
@@ -367,7 +369,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
       svg('path', {
         d: path,
         fill: 'none',
-        stroke: withAlpha(theme.ink, 0.18),
+        stroke: withAlpha(theme.ink, 0.11),
         'stroke-width': PISTE_HALF * 2 + 10,
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
@@ -384,7 +386,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
       svg('path', {
         d: path,
         fill: 'none',
-        stroke: withAlpha(theme.ink, 0.13),
+        stroke: withAlpha(theme.ink, 0.08),
         'stroke-width': PISTE_HALF * 2 - 6,
         'stroke-dasharray': '1 9',
         'stroke-linecap': 'round',
@@ -400,7 +402,10 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     shownProgress = progress
     shownWorld = world
 
-    const theme = themeForWorld(world)
+    // Only the drawn piste carries the world's colours here. Every control on top of it is fixed
+    // chrome, so the map reads the same in world one and world six.
+    const sceneTheme = themeForWorld(world)
+    const theme = UI_THEME
     const dark = isDarkTheme(theme)
     const width = scroller.clientWidth || 360
     root.style.background = theme.snow
@@ -408,7 +413,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
 
     applyGlass(nav, theme, { elevated: true })
     nav.style.color = theme.ink
-    worldName.textContent = theme.name.toUpperCase()
+    worldName.textContent = sceneTheme.name.toUpperCase()
 
     const first = (world - 1) * LEVELS_PER_WORLD + 1
     worldNote.textContent = `World ${world} · levels ${first}–${first + LEVELS_PER_WORLD - 1}`
@@ -435,7 +440,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
       strip.append(chip)
     }
 
-    drawScene(width, theme, world)
+    drawScene(width, sceneTheme, world)
 
     nodes.replaceChildren()
     for (let i = 0; i < LEVELS_PER_WORLD; i += 1) {
@@ -501,15 +506,18 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     }
   }
 
+  const redraw = (): void => {
+    if (shownProgress) renderWorld(shownProgress, shownWorld, -1)
+  }
+
   // Node positions are in pixels, so a rotation or a resized window has to redraw them.
   window.addEventListener('resize', () => {
-    if (shownProgress && root.style.display !== 'none') {
-      renderWorld(shownProgress, shownWorld, -1)
-    }
+    if (root.style.display !== 'none') redraw()
   })
 
   return {
     root,
+    redraw,
     show: (progress, focusLevel) => {
       root.style.display = 'flex'
       renderWorld(progress, worldOf(focusLevel), focusLevel)

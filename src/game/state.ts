@@ -57,6 +57,8 @@ export type GameState = {
   elapsed: number
   score: number
   bestScore: number
+  // The furthest a failed attempt on this level got, 0–1. Zero means there is no ghost to draw.
+  bestReach: number
   combo: number
   comboTimer: number
   runCoins: number
@@ -126,6 +128,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     elapsed: 0,
     score: 0,
     bestScore: 0,
+    bestReach: 0,
     combo: 0,
     comboTimer: 0,
     runCoins: 0,

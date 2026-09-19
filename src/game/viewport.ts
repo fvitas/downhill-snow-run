@@ -9,13 +9,15 @@ export type Viewport = {
   fit: () => void
 }
 
-export const createViewport = (canvas: HTMLCanvasElement): Viewport => {
+// `host` is for the colour picker, which runs the game inside a phone frame: layout size, so a
+// CSS transform on the frame doesn't feed back into the fit.
+export const createViewport = (canvas: HTMLCanvasElement, host?: HTMLElement): Viewport => {
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2D canvas context unavailable')
 
   const fit = () => {
-    const availableWidth = window.visualViewport?.width ?? window.innerWidth
-    const availableHeight = window.visualViewport?.height ?? window.innerHeight
+    const availableWidth = host?.clientWidth ?? window.visualViewport?.width ?? window.innerWidth
+    const availableHeight = host?.clientHeight ?? window.visualViewport?.height ?? window.innerHeight
     const scale = Math.min(availableWidth / LOGICAL_WIDTH, availableHeight / LOGICAL_HEIGHT)
     const dpr = Math.min(window.devicePixelRatio || 1, 3)
 
