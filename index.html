@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Ski — physics prototype</title>
+  </head>
+  <body class="m-0 flex h-dvh touch-none select-none items-center justify-center overscroll-none bg-slate-900">
+    <div id="stage" class="relative">
+      <canvas id="game" class="block"></canvas>
+    </div>
+    <div
+      id="overlay"
+      class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/80 text-white"
+      style="display: none"
+    >
+      <p id="overlay-message" class="text-lg font-medium tracking-wide"></p>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
