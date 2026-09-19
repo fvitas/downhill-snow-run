@@ -203,19 +203,24 @@ const crossing: Chunk = {
   },
 }
 
-// Dense at both edges, empty down the middle — a fast, pretty stretch.
+// A wide avenue that swings across the slope. Straight edge-lined ones let you hold the middle
+// and never touch the screen, so the lane always has to travel.
 const avenue: Chunk = {
   name: 'avenue',
   weight: 1.5,
   minDifficulty: 0,
-  build: ({ rng }) => {
-    const length = rngRange(rng, 380, 560)
+  build: ({ rng, gap, difficulty }) => {
+    const length = rngRange(rng, 420, 600)
     const step = 74
-    const inset = rngRange(rng, 34, 70)
+    const width = gap * lerp(2.2, 1.7, difficulty)
+    const amplitude = rngRange(rng, 0.18, 0.3) * LOGICAL_WIDTH
+    const phase = rngRange(rng, 0, Math.PI * 2)
+    const period = rngRange(rng, 280, 400)
     const trees: ChunkTree[] = []
     for (let y = 0; y < length; y += step) {
-      trees.push(treeAt(rng, inset + rngRange(rng, -10, 10), y))
-      trees.push(treeAt(rng, LOGICAL_WIDTH - inset + rngRange(rng, -10, 10), y + step / 2))
+      const lane = clampLane(LOGICAL_WIDTH / 2 + Math.sin(phase + y / period) * amplitude, width)
+      trees.push(treeAt(rng, lane - width / 2 + rngRange(rng, -8, 8), y))
+      trees.push(treeAt(rng, lane + width / 2 + rngRange(rng, -8, 8), y + step / 2))
     }
     return { trees, length }
   },

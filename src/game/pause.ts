@@ -35,8 +35,12 @@ export const attachPause = (
     state.paused = false
   }
 
+  // Only a touch device can rotate into portrait; a desktop window is landscape and must not
+  // be told to turn itself around.
+  const rotatable = window.matchMedia('(pointer: coarse)').matches
+
   const evaluate = () => {
-    blockedByOrientation = window.innerWidth > window.innerHeight
+    blockedByOrientation = rotatable && window.innerWidth > window.innerHeight
     if (blockedByOrientation) {
       show('Rotate to portrait')
     } else if (document.hidden) {
