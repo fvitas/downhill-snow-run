@@ -9,6 +9,9 @@ export const WORLD_COUNT = 20
 export const LEVEL_COUNT = LEVELS_PER_WORLD * WORLD_COUNT
 // Every tenth level is the coin run: no trees, no death, pure reward.
 export const BONUS_EVERY = 10
+// Halfway between two coin runs the wall comes down the mountain after you.
+export const AVALANCHE_EVERY = 5
+export const AVALANCHE_FROM_LEVEL = 15
 
 export type Level = {
   index: number
@@ -16,6 +19,7 @@ export type Level = {
   indexInWorld: number
   theme: Theme
   bonus: boolean
+  avalanche: boolean
   seed: number
   difficulty: number
   distanceM: number
@@ -57,6 +61,7 @@ export const levelAt = (rawIndex: number): Level => {
     indexInWorld,
     theme: themeForWorld(world),
     bonus,
+    avalanche: !bonus && index >= AVALANCHE_FROM_LEVEL && index % AVALANCHE_EVERY === 0,
     seed: hashSeed(index, SEED_SALT),
     difficulty,
     distanceM: bonus ? 500 : Math.round(lerp(400, 900, difficulty) / 10) * 10,

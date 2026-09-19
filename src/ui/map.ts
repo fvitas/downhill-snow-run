@@ -173,13 +173,14 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
         nodes.append(earned)
       }
 
-      if (level.bonus && !locked) {
+      const tag = level.bonus ? 'coin run' : level.avalanche ? 'avalanche' : null
+      if (tag && !locked) {
         const label = document.createElement('div')
         label.className = 'absolute text-center text-[10px] font-bold uppercase leading-none opacity-60'
         label.style.left = `${x - 40}px`
         label.style.top = `${y - NODE_SIZE / 2 - 14}px`
         label.style.width = '80px'
-        label.textContent = 'coin run'
+        label.textContent = tag
         nodes.append(label)
       }
     }

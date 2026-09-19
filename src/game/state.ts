@@ -1,5 +1,6 @@
 import type { TuningConfig } from './config.ts'
 import { buildCourse, levelAt, type Course, type Level } from './levels.ts'
+import { AVALANCHE_LEAD_PX } from './avalanche.ts'
 import { resetRock } from './rocks.ts'
 import type { Theme } from './themes.ts'
 import { BALL_SCREEN_Y, LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
@@ -20,7 +21,7 @@ export type Wobble = { tree: Tree; age: number; side: 1 | -1 }
 
 // Everything needed to re-judge a crash after the fact, and to draw it magnified.
 export type HitRecord = {
-  kind: 'tree' | 'wall' | 'rock'
+  kind: 'tree' | 'wall' | 'rock' | 'avalanche'
   score: number
   speed: number
   angleDeg: number
@@ -60,6 +61,8 @@ export type GameState = {
   comboTimer: number
   runCoins: number
   runDiamonds: number
+  // Leading edge of the wall, in world y. Only advanced on avalanche levels.
+  avalancheY: number
   // Impact hold and the small kick that follows it, both counting down to zero.
   freeze: number
   shake: number
@@ -125,6 +128,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     comboTimer: 0,
     runCoins: 0,
     runDiamonds: 0,
+    avalancheY: -AVALANCHE_LEAD_PX,
     freeze: 0,
     shake: 0,
     lastHit: null,
@@ -180,6 +184,7 @@ export const resetRun = (state: GameState): void => {
   state.comboTimer = 0
   state.runCoins = 0
   state.runDiamonds = 0
+  state.avalancheY = -AVALANCHE_LEAD_PX
   state.freeze = 0
   state.shake = 0
   state.lastHit = null

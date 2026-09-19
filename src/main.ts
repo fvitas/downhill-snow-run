@@ -1,5 +1,6 @@
 import './style.css'
 import { DEFAULT_PRESET } from './game/config.ts'
+import { stepAvalanche } from './game/avalanche.ts'
 import { checkCollisions, stepCombo } from './game/collision.ts'
 import { attachInput } from './game/input.ts'
 import { attachPause, tryLockPortrait } from './game/pause.ts'
@@ -103,6 +104,7 @@ const stepCountIn = (dt: number): void => {
 const stepRun = (dt: number): void => {
   stepPhysics(state, dt)
   stepRocks(state, dt)
+  stepAvalanche(state, dt)
   state.elapsed += dt
   checkCollisions(state)
   stepCombo(state, dt)

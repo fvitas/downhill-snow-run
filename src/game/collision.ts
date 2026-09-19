@@ -1,3 +1,4 @@
+import { avalancheCaught, pushAvalanche } from './avalanche.ts'
 import { burst } from './particles.ts'
 import { TRUNK_HALF_SCALE, type GameState, type HitRecord, type Rock, type Tree } from './state.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
@@ -79,6 +80,7 @@ const graze = (state: GameState, tree: Tree, ballX: number): void => {
   state.score += gain
   state.pops.push({ x: tree.x, y: tree.y - 24, text: `+${gain}`, life: 1 })
   state.wobbles.push({ tree, age: 0, side: tree.x < ballX ? -1 : 1 })
+  pushAvalanche(state, state.combo)
   burst(state, tree.x, tree.y - tree.radius * 0.4, 6)
 }
 
@@ -106,6 +108,11 @@ export const checkCollisions = (state: GameState): void => {
   if (state.dead) return
 
   collect(state)
+
+  if (avalancheCaught(state)) {
+    kill(state, 'avalanche', null)
+    return
+  }
 
   const r = state.tuning.ballRadius
   // Bonus runs cannot be lost: the walls just hold you in.

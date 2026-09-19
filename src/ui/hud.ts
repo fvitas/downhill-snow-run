@@ -195,7 +195,8 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
       card.style.background = `${theme.snow}dd`
       card.style.color = theme.ink
-      title.textContent = state.finished ? (level.bonus ? 'COLLECTED' : 'FINISH') : 'CRASHED'
+      const crashTitle = state.lastHit?.kind === 'avalanche' ? 'CAUGHT' : 'CRASHED'
+      title.textContent = state.finished ? (level.bonus ? 'COLLECTED' : 'FINISH') : crashTitle
       finalScore.textContent = String(state.score)
       finalScore.style.color = theme.ball
       primary.style.background = theme.ink

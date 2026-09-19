@@ -291,6 +291,52 @@ const drawCollectibles = (
   }
 }
 
+const AVALANCHE_BODY = '#e8eef4'
+const AVALANCHE_EDGE = '#c3d0dd'
+const AVALANCHE_DUST = 'rgba(255, 255, 255, 0.75)'
+const AVALANCHE_LUMPS = 9
+
+// A wall of snow filling everything above its leading edge, with a lumpy front that churns as
+// it moves. Drawn over the trees: whatever it has reached is buried.
+const drawAvalanche = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
+  if (!state.level.avalanche) return
+  const edge = state.avalancheY - camY
+  if (edge < -240) return
+
+  ctx.fillStyle = AVALANCHE_BODY
+  ctx.fillRect(0, -240, LOGICAL_WIDTH, edge + 240)
+
+  const step = LOGICAL_WIDTH / AVALANCHE_LUMPS
+  const churn = state.y * 0.02
+  ctx.fillStyle = AVALANCHE_BODY
+  ctx.beginPath()
+  for (let i = 0; i <= AVALANCHE_LUMPS; i += 1) {
+    const bulge = 22 + Math.sin(churn + i * 1.7) * 14
+    ctx.arc(i * step, edge, bulge, 0, Math.PI * 2)
+  }
+  ctx.fill()
+
+  ctx.strokeStyle = AVALANCHE_EDGE
+  ctx.lineWidth = 3
+  ctx.beginPath()
+  for (let i = 0; i <= AVALANCHE_LUMPS; i += 1) {
+    const bulge = 22 + Math.sin(churn + i * 1.7) * 14
+    ctx.moveTo(i * step + bulge, edge)
+    ctx.arc(i * step, edge, bulge, 0, Math.PI)
+  }
+  ctx.stroke()
+
+  // Puffs thrown out ahead of the front, so it reads as moving rather than as a curtain.
+  ctx.fillStyle = AVALANCHE_DUST
+  for (let i = 0; i < AVALANCHE_LUMPS; i += 1) {
+    const phase = churn * 1.6 + i * 2.3
+    const radius = 9 + Math.sin(phase) * 5
+    ctx.beginPath()
+    ctx.arc(i * step + step / 2, edge + 26 + Math.sin(phase * 1.3) * 16, radius, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+
 const ROCK_FILL = '#6b6660'
 const ROCK_DARK = '#4e4a45'
 const ROCK_EDGE = '#3a3733'
@@ -473,6 +519,7 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
     if (tree.y > state.y) drawTreeAt(ctx, state, tree, camY)
   }
   drawRocks(ctx, state, camY)
+  drawAvalanche(ctx, state, camY)
 
   drawPops(ctx, state, camY)
   if (state.inspect.on) drawHitboxes(ctx, state, camY)
