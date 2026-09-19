@@ -14,7 +14,13 @@ export const tryLockPortrait = async (): Promise<void> => {
   }
 }
 
-export const attachPause = (state: GameState, overlay: HTMLElement, message: HTMLElement): void => {
+export type PauseControl = { pause: () => void }
+
+export const attachPause = (
+  state: GameState,
+  overlay: HTMLElement,
+  message: HTMLElement,
+): PauseControl => {
   let blockedByOrientation = false
 
   const show = (text: string) => {
@@ -52,4 +58,6 @@ export const attachPause = (state: GameState, overlay: HTMLElement, message: HTM
   window.addEventListener('orientationchange', evaluate)
 
   evaluate()
+
+  return { pause: () => show('Tap to continue') }
 }

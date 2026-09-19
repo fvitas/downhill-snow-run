@@ -10,6 +10,7 @@ export type TuningConfig = {
   treeHitScale: number
   hitForgivePx: number
   hitDepthScale: number
+  grazePx: number
   finishDistanceM: number
 }
 
@@ -34,6 +35,7 @@ export const TUNING_FIELDS: readonly TuningField[] = [
   { key: 'treeHitScale', label: 'Trunk hitbox', min: 1, max: 8, step: 0.25, unit: '× trunk' },
   { key: 'hitForgivePx', label: 'Graze forgiveness', min: 0, max: 10, step: 0.5, unit: 'px' },
   { key: 'hitDepthScale', label: 'Hit depth', min: 0.15, max: 1, step: 0.05, unit: '× width' },
+  { key: 'grazePx', label: 'Near-miss reach', min: 20, max: 90, step: 1, unit: 'px' },
   { key: 'finishDistanceM', label: 'Finish line', min: 100, max: 3_000, step: 50, unit: 'm' },
 ]
 
@@ -54,6 +56,7 @@ export const PRESETS: Record<PresetName, TuningConfig> = {
     treeHitScale: 1,
     hitForgivePx: 4,
     hitDepthScale: 0.5,
+    grazePx: 46,
     finishDistanceM: 500,
   },
   floaty: {
@@ -68,6 +71,7 @@ export const PRESETS: Record<PresetName, TuningConfig> = {
     treeHitScale: 1,
     hitForgivePx: 4,
     hitDepthScale: 0.5,
+    grazePx: 46,
     finishDistanceM: 500,
   },
   heavy: {
@@ -82,6 +86,7 @@ export const PRESETS: Record<PresetName, TuningConfig> = {
     treeHitScale: 1,
     hitForgivePx: 4,
     hitDepthScale: 0.5,
+    grazePx: 46,
     finishDistanceM: 500,
   },
 }

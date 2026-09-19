@@ -1,4 +1,4 @@
-import { runOver, type GameState } from './state.ts'
+import { runActive, type GameState } from './state.ts'
 import { flip } from './physics.ts'
 
 // The tuning panel lives inside the input target, so its own pointer/key handling must win.
@@ -8,7 +8,7 @@ const inUi = (node: EventTarget | null): boolean =>
 export const attachInput = (state: GameState, target: HTMLElement): void => {
   const press = () => {
     // A tap that dismisses the pause or game-over overlay is swallowed, never counted as a flip.
-    if (state.paused || runOver(state)) return
+    if (!runActive(state) || state.screen !== 'run') return
     if (state.pressed) return
     state.pressed = true
     flip(state)

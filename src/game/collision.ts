@@ -3,6 +3,14 @@ import { TRUNK_HALF_SCALE, type GameState, type HitRecord, type Tree } from './s
 import { LOGICAL_WIDTH } from './viewport.ts'
 
 const SCAN_WINDOW = 120
+const COMBO_SECONDS = 1.6
+const COMBO_BASE = 2
+const COMBO_CAP = 32
+const COIN_RADIUS = 30
+const COIN_POINTS = 5
+const DIAMOND_POINTS = 50
+const FREEZE_SECONDS = 0.4
+const SHAKE_SECONDS = 0.22
 
 // Trunk only — the canopy triangles are decoration — minus a few pixels so a scrape down the side
 // of the pole isn't a crash. Shallow in y: brushing past in front of a trunk should read as a pass.
@@ -28,9 +36,23 @@ const distanceToStepSq = (state: GameState, x: number, y: number, depth: number)
   return offX * offX + offY * offY
 }
 
+// Where the ball was across the slope at the moment it drew level with `y`.
+const ballXAt = (state: GameState, y: number): number => {
+  const span = state.y - state.prevY
+  if (span <= 0) return state.x
+  const t = Math.min(1, Math.max(0, (y - state.prevY) / span))
+  return state.prevX + (state.x - state.prevX) * t
+}
+
+const comboPoints = (combo: number): number =>
+  Math.min(COMBO_CAP, COMBO_BASE * 2 ** Math.max(0, combo - 1))
+
 const kill = (state: GameState, kind: HitRecord['kind'], tree: Tree | null): void => {
   state.dead = true
   state.pressed = false
+  state.combo = 0
+  state.freeze = FREEZE_SECONDS
+  state.shake = SHAKE_SECONDS
   state.lastHit = {
     kind,
     score: state.score,
@@ -41,22 +63,58 @@ const kill = (state: GameState, kind: HitRecord['kind'], tree: Tree | null): voi
     tree: tree ? { x: tree.x, y: tree.y, radius: tree.radius, ...treeHitExtents(state, tree) } : null,
   }
   burst(state, state.x, state.y, 26)
-  if (state.score > state.best) state.best = state.score
+}
+
+const graze = (state: GameState, tree: Tree, ballX: number): void => {
+  tree.grazed = true
+  state.combo += 1
+  state.comboTimer = COMBO_SECONDS
+  const gain = comboPoints(state.combo)
+  state.score += gain
+  state.pops.push({ x: tree.x, y: tree.y - 24, text: `+${gain}`, life: 1 })
+  state.wobbles.push({ tree, age: 0, side: tree.x < ballX ? -1 : 1 })
+  burst(state, tree.x, tree.y - tree.radius * 0.4, 6)
+}
+
+const collect = (state: GameState): void => {
+  for (const item of state.course.collectibles) {
+    if (item.taken) continue
+    if (item.y <= state.prevY || item.y > state.y) continue
+    if (Math.abs(item.x - ballXAt(state, item.y)) > COIN_RADIUS) continue
+
+    item.taken = true
+    const diamond = item.kind === 'diamond'
+    if (diamond) state.runDiamonds += 1
+    else state.runCoins += 1
+    state.score += diamond ? DIAMOND_POINTS : COIN_POINTS
+    state.pops.push({
+      x: item.x,
+      y: item.y - 20,
+      text: diamond ? '+50' : `+${COIN_POINTS}`,
+      life: 1,
+    })
+  }
 }
 
 export const checkCollisions = (state: GameState): void => {
   if (state.dead) return
 
+  collect(state)
+
   const r = state.tuning.ballRadius
-  if (state.x <= r || state.x >= LOGICAL_WIDTH - r) {
+  // Bonus runs cannot be lost: the walls just hold you in.
+  if (!state.level.bonus && (state.x <= r || state.x >= LOGICAL_WIDTH - r)) {
     state.wallFlash = 1
     state.wallFlashSide = state.x <= r ? -1 : 1
     kill(state, 'wall', null)
     return
   }
 
-  // Trees are only roughly ordered by y (spawn jitter), so scan a window instead of breaking early.
-  for (const tree of state.trees) {
+  const { trees } = state
+  for (let i = state.treeFrom; i < state.treeTo; i += 1) {
+    const tree = trees[i]
+    if (!tree) continue
+
     const dy = tree.y - state.y
     if (dy < -SCAN_WINDOW || dy > SCAN_WINDOW) continue
 
@@ -65,5 +123,17 @@ export const checkCollisions = (state: GameState): void => {
       kill(state, 'tree', tree)
       return
     }
+
+    // Scored on the frame the ball draws level with the trunk, so it reads as "that was close".
+    if (!tree.grazed && tree.y > state.prevY && tree.y <= state.y) {
+      const ballX = ballXAt(state, tree.y)
+      if (Math.abs(tree.x - ballX) <= state.tuning.grazePx) graze(state, tree, ballX)
+    }
   }
+}
+
+export const stepCombo = (state: GameState, dt: number): void => {
+  if (state.comboTimer <= 0) return
+  state.comboTimer -= dt
+  if (state.comboTimer <= 0) state.combo = 0
 }

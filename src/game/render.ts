@@ -1,33 +1,11 @@
 import { treeHitExtents } from './collision.ts'
-import { finishY, TRUNK_HALF_SCALE, type GameState, type Tree } from './state.ts'
+import { finishY, TRUNK_HALF_SCALE, type GameState, type Theme, type Tree } from './state.ts'
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
-
-const SNOW = '#faf7f0'
-const TRACK = '#f0e5bd'
-const TREE_DARK = '#2f4f43'
-const TREE_LIGHT = '#4c6a5c'
-const TRUNK_DARK = '#63452c'
-const TRUNK_LIGHT = '#7a5638'
-const CAST = 'rgba(18, 40, 34, 0.3)'
-const SHADOW = 'rgba(126, 124, 118, 0.22)'
-const BALL = '#f5a623'
-const BALL_EDGE = '#d98a10'
-const SPRAY = 'rgba(214, 212, 205, '
-
-// Shadows are a flattened copy of the pine sheared down-left, away from the sun on the right.
-const TREE_SHADOW = 'rgba(122, 120, 114, 0.16)'
-const SHADOW_SHEAR = 0.85
-const SHADOW_FLATTEN = -0.4
-// Blurring per tree per frame costs far too much, so the shape is blurred once at this radius and
-// blitted scaled — which also makes a bigger tree's shadow proportionally softer.
-const SHADOW_REF = 56
-const SHADOW_BLUR = 18
-const SHADOW_PAD = SHADOW_BLUR * 3
 
 const drawTrail = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
   if (state.trail.length < 2) return
 
-  ctx.strokeStyle = TRACK
+  ctx.strokeStyle = state.theme.trail
   ctx.lineWidth = state.tuning.ballRadius * 1.05
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
@@ -44,14 +22,8 @@ const drawTrail = (ctx: CanvasRenderingContext2D, state: GameState, camY: number
   ctx.stroke()
 }
 
-// Sorted so a nearer pine overlaps the one behind it; the jittered spawn y isn't ordered.
-const visibleTrees = (state: GameState, camY: number): Tree[] =>
-  state.trees
-    .filter((tree) => {
-      const screenY = tree.y - camY
-      return screenY > -160 && screenY < LOGICAL_HEIGHT + 60
-    })
-    .sort((a, b) => a.y - b.y)
+// Already sorted by y in the course, so the window is drawn back to front as it stands.
+const visibleTrees = (state: GameState): Tree[] => state.trees.slice(state.treeFrom, state.treeTo)
 
 // Tree shape, tuned in mockups/tree5.html. Every number is a multiple of the tree's radius.
 type Tier = { base: number; height: number; spread: number }
@@ -75,6 +47,15 @@ const TRUNK_OVERLAP = 0.3
 const CONE_DEPTH = 0.26
 const CAST_X = -0.22
 const CAST_Y = 0.1
+
+// Shadows are a flattened copy of the pine sheared down-left, away from the sun on the right.
+const SHADOW_SHEAR = 0.85
+const SHADOW_FLATTEN = -0.4
+// Blurring per tree per frame costs far too much, so the shape is blurred once at this radius and
+// blitted scaled — which also makes a bigger tree's shadow proportionally softer.
+const SHADOW_REF = 56
+const SHADOW_BLUR = 18
+const SHADOW_PAD = SHADOW_BLUR * 3
 
 const tierPath = (
   ctx: CanvasRenderingContext2D,
@@ -126,6 +107,7 @@ const trunkRect = (
 // The tier above dropped onto this tier's branches, thrown the same way as the snow shadow.
 const drawCast = (
   ctx: CanvasRenderingContext2D,
+  theme: Theme,
   x: number,
   groundY: number,
   r: number,
@@ -137,7 +119,7 @@ const drawCast = (
   ctx.save()
   tierPath(ctx, x, groundY, r, tier)
   ctx.clip()
-  ctx.fillStyle = CAST
+  ctx.fillStyle = theme.cast
   ctx.beginPath()
   ctx.ellipse(x + CAST_X * rx, groundY - above.base * r - ry + CAST_Y * r, rx, ry, 0, 0, Math.PI * 2)
   ctx.fill()
@@ -146,7 +128,7 @@ const drawCast = (
 
 type ShadowSprite = { canvas: HTMLCanvasElement; originX: number; originY: number }
 
-const createShadowSprite = (tiers: Tier[]): ShadowSprite => {
+const createShadowSprite = (tiers: Tier[], colour: string): ShadowSprite => {
   const top = tiers[tiers.length - 1]
   const bottom = tiers[0]
   if (!top || !bottom) throw new Error('a tree needs at least one tier')
@@ -168,7 +150,7 @@ const createShadowSprite = (tiers: Tier[]): ShadowSprite => {
   ctx.filter = `blur(${SHADOW_BLUR}px)`
   ctx.translate(originX, originY)
   ctx.transform(1, 0, SHADOW_SHEAR, SHADOW_FLATTEN, 0, 0)
-  ctx.fillStyle = TREE_SHADOW
+  ctx.fillStyle = colour
   trunkRect(ctx, 0, 0, SHADOW_REF)
   ctx.fill()
   for (const tier of tiers) {
@@ -179,19 +161,26 @@ const createShadowSprite = (tiers: Tier[]): ShadowSprite => {
   return { canvas, originX, originY }
 }
 
-const shadowSprites = new Map<Tier[], ShadowSprite>([
-  [TIERS_2, createShadowSprite(TIERS_2)],
-  [TIERS_3, createShadowSprite(TIERS_3)],
-])
+// One blurred sprite per tier-set per theme colour, built the first time that theme is played.
+const shadowSprites = new Map<string, ShadowSprite>()
+
+const shadowSprite = (tiers: Tier[], colour: string): ShadowSprite => {
+  const key = `${tiers === TIERS_3 ? 3 : 2}:${colour}`
+  const existing = shadowSprites.get(key)
+  if (existing) return existing
+  const sprite = createShadowSprite(tiers, colour)
+  shadowSprites.set(key, sprite)
+  return sprite
+}
 
 const drawShadow = (
   ctx: CanvasRenderingContext2D,
+  theme: Theme,
   x: number,
   groundY: number,
   radius: number,
 ): void => {
-  const sprite = shadowSprites.get(tiersFor(radius))
-  if (!sprite) return
+  const sprite = shadowSprite(tiersFor(radius), theme.shadow)
   const scale = radius / SHADOW_REF
   const { canvas, originX, originY } = sprite
   ctx.drawImage(
@@ -205,29 +194,100 @@ const drawShadow = (
 
 const drawPine = (
   ctx: CanvasRenderingContext2D,
+  theme: Theme,
   x: number,
   groundY: number,
   radius: number,
 ): void => {
   const trunkHalf = radius * TRUNK_HALF_SCALE
   const trunkTop = groundY - (TRUNK_VISIBLE + TRUNK_OVERLAP) * radius
-  ctx.fillStyle = TRUNK_DARK
+  ctx.fillStyle = theme.trunkDark
   ctx.fillRect(x - trunkHalf, trunkTop, trunkHalf * 2, groundY - trunkTop)
-  ctx.fillStyle = TRUNK_LIGHT
+  ctx.fillStyle = theme.trunkLight
   ctx.fillRect(x, trunkTop, trunkHalf, groundY - trunkTop)
 
   const tiers = tiersFor(radius)
   tiers.forEach((tier, index) => {
-    ctx.fillStyle = TREE_DARK
+    ctx.fillStyle = theme.treeDark
     tierPath(ctx, x, groundY, radius, tier)
     ctx.fill()
-    ctx.fillStyle = TREE_LIGHT
+    ctx.fillStyle = theme.treeLight
     tierLitPath(ctx, x, groundY, radius, tier)
     ctx.fill()
 
     const above = tiers[index + 1]
-    if (above) drawCast(ctx, x, groundY, radius, tier, above)
+    if (above) drawCast(ctx, theme, x, groundY, radius, tier, above)
   })
+}
+
+const WOBBLE_SECONDS = 1
+const WOBBLE_RADIANS = 0.13
+const WOBBLE_HZ = 26
+const WOBBLE_DECAY = 5
+
+// Sways about the trunk base, so the tip travels and the roots don't.
+const drawTreeAt = (
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  tree: Tree,
+  camY: number,
+): void => {
+  const groundY = tree.y - camY
+  const wobble = state.wobbles.find((entry) => entry.tree === tree)
+  if (!wobble) {
+    drawPine(ctx, state.theme, tree.x, groundY, tree.radius)
+    return
+  }
+
+  const lean =
+    Math.sin(wobble.age * WOBBLE_HZ) * WOBBLE_RADIANS * Math.exp(-wobble.age * WOBBLE_DECAY)
+  ctx.save()
+  ctx.translate(tree.x, groundY)
+  ctx.rotate(lean * -wobble.side)
+  drawPine(ctx, state.theme, 0, 0, tree.radius)
+  ctx.restore()
+}
+
+const COIN_RADIUS = 11
+const COIN_FILL = '#f7c948'
+const COIN_EDGE = '#c9971f'
+const DIAMOND_FILL = '#6fd3e8'
+const DIAMOND_EDGE = '#2f93ad'
+
+const drawCollectibles = (
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  camY: number,
+): void => {
+  for (const item of state.course.collectibles) {
+    if (item.taken) continue
+    const screenY = item.y - camY
+    if (screenY < -30 || screenY > LOGICAL_HEIGHT + 30) continue
+
+    if (item.kind === 'coin') {
+      ctx.fillStyle = COIN_FILL
+      ctx.strokeStyle = COIN_EDGE
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      // Squashed across, so a row of them reads as spinning discs lying on the snow.
+      ctx.ellipse(item.x, screenY, COIN_RADIUS * 0.72, COIN_RADIUS, 0, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+      continue
+    }
+
+    ctx.fillStyle = DIAMOND_FILL
+    ctx.strokeStyle = DIAMOND_EDGE
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(item.x, screenY - COIN_RADIUS * 1.2)
+    ctx.lineTo(item.x + COIN_RADIUS, screenY)
+    ctx.lineTo(item.x, screenY + COIN_RADIUS * 1.2)
+    ctx.lineTo(item.x - COIN_RADIUS, screenY)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+  }
 }
 
 const FINISH_CHECK = '#3f4a5a'
@@ -256,11 +316,26 @@ const drawParticles = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   for (const particle of state.particles) {
     const screenY = particle.y - camY
     if (screenY < -20 || screenY > LOGICAL_HEIGHT + 20) continue
-    ctx.fillStyle = `${SPRAY}${(particle.life / particle.maxLife) * 0.9})`
+    ctx.fillStyle = `rgba(255, 255, 255, ${(particle.life / particle.maxLife) * 0.9})`
     ctx.beginPath()
     ctx.arc(particle.x, screenY, particle.size, 0, Math.PI * 2)
     ctx.fill()
   }
+}
+
+const POP_RISE = 46
+
+const drawPops = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
+  ctx.textAlign = 'center'
+  ctx.font = '700 26px system-ui, sans-serif'
+  for (const pop of state.pops) {
+    const screenY = pop.y - camY - (1 - pop.life) * POP_RISE
+    if (screenY < -40 || screenY > LOGICAL_HEIGHT + 40) continue
+    ctx.globalAlpha = Math.max(0, Math.min(1, pop.life * 1.4))
+    ctx.fillStyle = state.theme.ball
+    ctx.fillText(pop.text, pop.x, screenY)
+  }
+  ctx.globalAlpha = 1
 }
 
 const drawWallFlash = (ctx: CanvasRenderingContext2D, state: GameState): void => {
@@ -274,13 +349,13 @@ const drawBall = (ctx: CanvasRenderingContext2D, state: GameState, camY: number)
   const screenY = state.y - camY
   const r = state.tuning.ballRadius
 
-  ctx.fillStyle = SHADOW
+  ctx.fillStyle = state.theme.shadow
   ctx.beginPath()
   ctx.ellipse(state.x - r * 0.7, screenY + r * 0.45, r * 1.1, r * 0.55, 0, 0, Math.PI * 2)
   ctx.fill()
 
-  ctx.fillStyle = BALL
-  ctx.strokeStyle = BALL_EDGE
+  ctx.fillStyle = state.theme.ball
+  ctx.strokeStyle = state.theme.ballEdge
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.arc(state.x, screenY, r, 0, Math.PI * 2)
@@ -291,12 +366,12 @@ const drawBall = (ctx: CanvasRenderingContext2D, state: GameState, camY: number)
 const HITBOX = 'rgba(239, 68, 68, 0.75)'
 const STEP_LINE = 'rgba(37, 99, 235, 0.9)'
 
-// Inspect overlay: the lethal ellipse around every trunk plus the exact step that killed the run.
+// Crash-site overlay: the lethal ellipse around every trunk plus the exact step that killed the run.
 const drawHitboxes = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
   ctx.lineWidth = 0.5
   ctx.strokeStyle = HITBOX
 
-  for (const tree of visibleTrees(state, camY)) {
+  for (const tree of visibleTrees(state)) {
     const { rx, ry } = treeHitExtents(state, tree)
     ctx.beginPath()
     ctx.ellipse(tree.x, tree.y - camY, rx, ry, 0, 0, Math.PI * 2)
@@ -326,32 +401,54 @@ const applyInspect = (ctx: CanvasRenderingContext2D, state: GameState, camY: num
   ctx.translate(-focusX, -focusY)
 }
 
+const SHAKE_PX = 7
+
 export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
-  ctx.fillStyle = SNOW
+  ctx.fillStyle = state.theme.snow
   ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT)
 
   ctx.save()
+  if (state.shake > 0 && !state.inspect.on) {
+    const kick = state.shake * SHAKE_PX
+    ctx.translate((Math.random() - 0.5) * kick, (Math.random() - 0.5) * kick)
+  }
   if (state.inspect.on) applyInspect(ctx, state, camY)
 
   drawFinish(ctx, state, camY)
   drawTrail(ctx, state, camY)
+  drawCollectibles(ctx, state, camY)
   drawParticles(ctx, state, camY)
 
-  const visible = visibleTrees(state, camY)
-  for (const tree of visible) drawShadow(ctx, tree.x, tree.y - camY, tree.radius)
+  const visible = visibleTrees(state)
+  for (const tree of visible) drawShadow(ctx, state.theme, tree.x, tree.y - camY, tree.radius)
 
   // Pines the ball has passed go under it; pines still ahead draw over it, so clipping a canopy
   // reads as ducking under the branches rather than crashing.
   for (const tree of visible) {
-    if (tree.y <= state.y) drawPine(ctx, tree.x, tree.y - camY, tree.radius)
+    if (tree.y <= state.y) drawTreeAt(ctx, state, tree, camY)
   }
   drawBall(ctx, state, camY)
   for (const tree of visible) {
-    if (tree.y > state.y) drawPine(ctx, tree.x, tree.y - camY, tree.radius)
+    if (tree.y > state.y) drawTreeAt(ctx, state, tree, camY)
   }
 
+  drawPops(ctx, state, camY)
   if (state.inspect.on) drawHitboxes(ctx, state, camY)
   ctx.restore()
 
   drawWallFlash(ctx, state)
+}
+
+export const stepEffects = (state: GameState, dt: number): void => {
+  for (const wobble of state.wobbles) wobble.age += dt
+  while (state.wobbles.length > 0 && (state.wobbles[0]?.age ?? 0) > WOBBLE_SECONDS) {
+    state.wobbles.shift()
+  }
+
+  for (const pop of state.pops) pop.life -= dt * 0.9
+  while (state.pops.length > 0 && (state.pops[0]?.life ?? 0) <= 0) state.pops.shift()
+
+  state.shake = Math.max(0, state.shake - dt * 4)
+  state.freeze = Math.max(0, state.freeze - dt)
+  state.wallFlash = Math.max(0, state.wallFlash - dt * 2.5)
 }

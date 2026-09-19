@@ -2,8 +2,6 @@ import { PRESETS, TUNING_FIELDS, type PresetName, type TuningConfig } from './co
 import type { HitRecord } from './state.ts'
 
 const STORAGE_KEY = 'ski:tuning'
-const BEST_KEY = 'ski:best'
-const BEST_TIME_KEY = 'ski:besttime'
 const BAD_HITS_KEY = 'ski:badhits'
 const MAX_BAD_HITS = 50
 
@@ -33,46 +31,6 @@ export const appendBadHit = (hit: HitRecord, tuning: TuningConfig): number => {
 export const clearBadHits = (): void => {
   try {
     localStorage.removeItem(BAD_HITS_KEY)
-  } catch {
-    /* ignored */
-  }
-}
-
-export const loadBest = (): number => {
-  try {
-    const value = Number(localStorage.getItem(BEST_KEY))
-    return Number.isFinite(value) && value > 0 ? value : 0
-  } catch {
-    return 0
-  }
-}
-
-export const saveBest = (best: number): void => {
-  try {
-    localStorage.setItem(BEST_KEY, String(best))
-  } catch {
-    /* ignored */
-  }
-}
-
-// Kept per distance: a 500 m time says nothing about a 1500 m course.
-export const loadBestTime = (distanceM: number): number => {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(BEST_TIME_KEY) ?? '{}')
-    if (typeof parsed !== 'object' || parsed === null) return 0
-    const value = (parsed as Record<string, unknown>)[String(distanceM)]
-    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0
-  } catch {
-    return 0
-  }
-}
-
-export const saveBestTime = (distanceM: number, seconds: number): void => {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(BEST_TIME_KEY) ?? '{}')
-    const times = typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, number>) : {}
-    times[String(distanceM)] = seconds
-    localStorage.setItem(BEST_TIME_KEY, JSON.stringify(times))
   } catch {
     /* ignored */
   }
