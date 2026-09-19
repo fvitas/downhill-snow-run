@@ -16,7 +16,7 @@ export type Hud = {
   update: () => void
 }
 
-const PRAISE = ['Nice!', 'Smooth!', 'Exquisite!', "You're on fire!"]
+const PRAISE = ['Clean!', 'Carving!', 'Sending it!', 'Full send!']
 
 // Lucide's `pause`, inlined — one icon does not justify the dependency. Solid bars, not the
 // stroked default, so it still reads at arm's length on the slope.
