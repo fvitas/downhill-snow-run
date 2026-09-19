@@ -4,7 +4,7 @@ import { TRUNK_HALF_SCALE, type GameState, type HitRecord, type Rock, type Tree 
 import { LOGICAL_WIDTH } from './viewport.ts'
 
 const SCAN_WINDOW = 120
-const COMBO_SECONDS = 1.6
+const COMBO_SECONDS = 1.4
 const COMBO_BASE = 2
 const COMBO_CAP = 32
 const COIN_RADIUS = 30

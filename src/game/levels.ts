@@ -84,7 +84,9 @@ export type Course = {
 // Courses are small enough (a few hundred trees) to build whole, which beats streaming: the star
 // thresholds need to know what the whole level contains before the run starts.
 const RUN_IN_PX = 520
-const RUN_OUT_PX = 260
+// The slope runs to 95 % and then empties, so the trees thin out only on the very last approach.
+const SLOPE_END_FRACTION = 0.95
+const slopeEndPx = (lengthPx: number): number => lengthPx * SLOPE_END_FRACTION
 // What one tree is worth on a strong run: chains break, so the ×32 cap is not a useful yardstick.
 const POINTS_PER_TREE = 8
 
@@ -99,6 +101,7 @@ const toTree = (rng: Rng, chunkTree: ChunkTree, offsetY: number): Tree => ({
 
 const STRAY_BAND_PX = 74
 const STRAY_SPACING_PX = 250
+const STRAY_X_TRIES = 6
 
 // The widest way through the band around `y`, counting the screen edges as walls.
 const widestLanePx = (trees: Tree[], y: number, candidateX: number): number => {
@@ -117,25 +120,46 @@ const widestLanePx = (trees: Tree[], y: number, candidateX: number): number => {
   return Math.max(widest, LOGICAL_WIDTH - previous)
 }
 
+// One loose tree at `y`, or nothing at all if every x tried would close the lane. A crowded spot
+// gets a few shots at a different x before it is given up on.
+const tryStray = (rng: Rng, trees: Tree[], y: number, gap: number): void => {
+  for (let tries = 0; tries < STRAY_X_TRIES; tries += 1) {
+    const x = rngRange(rng, TREE_MARGIN, LOGICAL_WIDTH - TREE_MARGIN)
+    if (widestLanePx(trees, y, x) < gap) continue
+    trees.push({
+      x,
+      y,
+      radius: rngRange(rng, 9, 17),
+      rotation: rng() * Math.PI * 2,
+      shade: rng(),
+      grazed: false,
+    })
+    return
+  }
+}
+
 // Loose trees dropped into the space the chunks leave empty, so the slope reads as forest rather
-// than as a sequence of drawn shapes. One is only kept if a lane wide enough survives it.
+// than as a sequence of drawn shapes.
 const addStrays = (rng: Rng, trees: Tree[], lengthPx: number, gap: number): void => {
-  for (let y = RUN_IN_PX; y < lengthPx - RUN_OUT_PX; y += STRAY_SPACING_PX) {
+  const end = slopeEndPx(lengthPx)
+  for (let y = RUN_IN_PX; y < end; y += STRAY_SPACING_PX) {
     const attempts = rngInt(rng, 1, 3)
     for (let i = 0; i < attempts; i += 1) {
-      const strayY = y + rngRange(rng, 0, STRAY_SPACING_PX)
-      const strayX = rngRange(rng, TREE_MARGIN, LOGICAL_WIDTH - TREE_MARGIN)
-      if (strayY > lengthPx - RUN_OUT_PX) continue
-      if (widestLanePx(trees, strayY, strayX) < gap) continue
-      trees.push({
-        x: strayX,
-        y: strayY,
-        radius: rngRange(rng, 9, 17),
-        rotation: rng() * Math.PI * 2,
-        shade: rng(),
-        grazed: false,
-      })
+      tryStray(rng, trees, Math.min(end, y + rngRange(rng, 0, STRAY_SPACING_PX)), gap)
     }
+  }
+}
+
+// Whatever the last chunk left bare, walked out at slope density up to the cutoff — otherwise the
+// forest ends wherever the chunk loop happened to stop, which on some seeds is 5 % early.
+const TAIL_SPACING_PX: readonly [number, number] = [70, 140]
+
+const fillTail = (rng: Rng, trees: Tree[], lengthPx: number, gap: number): void => {
+  const end = slopeEndPx(lengthPx)
+  let y = trees.reduce((lowest, tree) => Math.max(lowest, tree.y), RUN_IN_PX)
+  while (y < end) {
+    y = Math.min(end, y + rngRange(rng, ...TAIL_SPACING_PX))
+    tryStray(rng, trees, y, gap)
   }
 }
 
@@ -145,7 +169,7 @@ const buildTreeCourse = (level: Level, lengthPx: number): Tree[] => {
   let cursor = RUN_IN_PX
   let previous: string | null = null
 
-  while (cursor < lengthPx - RUN_OUT_PX) {
+  while (cursor < slopeEndPx(lengthPx)) {
     const chunk = pickChunk(rng, level.difficulty, previous)
     const { trees: chunkTrees, length } = chunk.build({
       rng,
@@ -153,7 +177,7 @@ const buildTreeCourse = (level: Level, lengthPx: number): Tree[] => {
       difficulty: level.difficulty,
     })
     for (const chunkTree of chunkTrees) {
-      if (chunkTree.y + cursor > lengthPx - RUN_OUT_PX) continue
+      if (chunkTree.y + cursor > slopeEndPx(lengthPx)) continue
       trees.push(toTree(rng, chunkTree, cursor))
     }
     // A short gap between chunks so two patterns never read as one mess.
@@ -162,6 +186,7 @@ const buildTreeCourse = (level: Level, lengthPx: number): Tree[] => {
   }
 
   addStrays(rng, trees, lengthPx, level.minGapPx)
+  fillTail(rng, trees, lengthPx, level.minGapPx)
   return trees.sort((a, b) => a.y - b.y)
 }
 
@@ -262,7 +287,7 @@ const COIN_SEGMENTS: readonly CoinSegment[] = [
 const buildCoinCourse = (level: Level, lengthPx: number): Collectible[] => {
   const rng = createRng(level.seed ^ 0x9e37)
   const collectibles: Collectible[] = []
-  const end = lengthPx - RUN_OUT_PX
+  const end = slopeEndPx(lengthPx)
   let cursor = RUN_IN_PX
 
   while (cursor < end) {
@@ -287,7 +312,7 @@ const buildRocks = (level: Level, lengthPx: number): Rock[] => {
   const spacing = lerp(ROCK_SPACING, ROCK_SPACING * 0.45, reach)
   const rocks: Rock[] = []
 
-  for (let y = RUN_IN_PX + spacing; y < lengthPx - RUN_OUT_PX; y += spacing) {
+  for (let y = RUN_IN_PX + spacing; y < slopeEndPx(lengthPx); y += spacing) {
     const fromLeft = rng() < 0.5
     const radius = rngRange(rng, 20, 30)
     const spawnX = fromLeft ? radius : LOGICAL_WIDTH - radius

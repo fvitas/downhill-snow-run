@@ -4,6 +4,27 @@ export const LOGICAL_HEIGHT = 960
 // Ball rides in the upper third; the slope ahead fills the rest of the screen below it.
 export const BALL_SCREEN_Y = 0.3
 
+// Where the tape comes to rest. The last stretch is skied, not scrolled: the camera brakes to a
+// stop so the finish settles here and the ball slides down the screen to meet it.
+export const FINISH_REST_Y = 0.8
+
+const FOLLOW_PX = LOGICAL_HEIGHT * BALL_SCREEN_Y
+const REST_PX = LOGICAL_HEIGHT * FINISH_REST_Y
+
+// The ball has `REST_PX - FOLLOW_PX` of screen to cross. A camera braking as (1 - t)² hands over
+// two thirds of the zone it travels, so the zone must be 1.5× that screen travel for the scroll to
+// reach exactly zero at the tape — any shorter and the camera would have to reverse.
+export const FINISH_EASE_PX = (REST_PX - FOLLOW_PX) * 1.5
+
+// How far down the screen the ball has slid, `into` px into the braking zone.
+export const finishDrop = (into: number): number => {
+  const t = Math.min(1, Math.max(0, into / FINISH_EASE_PX))
+  return FINISH_EASE_PX * (t - (1 - (1 - t) ** 3) / 3)
+}
+
+export const cameraYFor = (y: number, finish: number): number =>
+  Math.min(y - FOLLOW_PX - finishDrop(y - (finish - FINISH_EASE_PX)), finish - REST_PX)
+
 export type Viewport = {
   ctx: CanvasRenderingContext2D
   fit: () => void

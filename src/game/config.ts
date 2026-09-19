@@ -56,7 +56,7 @@ export const PRESETS: Record<PresetName, TuningConfig> = {
     treeHitScale: 1,
     hitForgivePx: 4,
     hitDepthScale: 0.5,
-    grazePx: 46,
+    grazePx: 45,
     finishDistanceM: 500,
   },
   floaty: {
@@ -71,7 +71,7 @@ export const PRESETS: Record<PresetName, TuningConfig> = {
     treeHitScale: 1,
     hitForgivePx: 4,
     hitDepthScale: 0.5,
-    grazePx: 46,
+    grazePx: 45,
     finishDistanceM: 500,
   },
   heavy: {
@@ -86,7 +86,7 @@ export const PRESETS: Record<PresetName, TuningConfig> = {
     treeHitScale: 1,
     hitForgivePx: 4,
     hitDepthScale: 0.5,
-    grazePx: 46,
+    grazePx: 45,
     finishDistanceM: 500,
   },
 }

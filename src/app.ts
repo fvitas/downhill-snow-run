@@ -36,6 +36,8 @@ const TRAIL_POINT_SPACING = 8
 const TRAIL_TAIL_PX = 260
 // "GO" holds just long enough to read before the slope moves.
 const GO_HOLD_SECONDS = 0.3
+// How long the ball skis on past the tape before the card judges the run.
+const FINISH_COAST_SECONDS = 0.35
 
 export type GameMount = {
   stage: HTMLElement
@@ -131,6 +133,18 @@ export const createGame = (mount: GameMount): Game => {
     if (persist) saveProgress(progress)
   }
 
+  // Crossing the tape doesn't end the run on the spot: the ball skis through it for a beat, which
+  // reads as finishing rather than as hitting a stop.
+  const stepFinish = (state: GameState, dt: number): void => {
+    if (state.dead) return
+    if (state.coast > 0) {
+      state.coast -= dt
+      if (state.coast <= 0) crossFinish()
+    } else if (state.y >= finishY(state)) {
+      state.coast = FINISH_COAST_SECONDS
+    }
+  }
+
   const stepCountIn = (dt: number): void => {
     state.countdown -= dt
     if (state.countdown <= -GO_HOLD_SECONDS) state.started = true
@@ -141,9 +155,10 @@ export const createGame = (mount: GameMount): Game => {
     stepRocks(state, dt)
     stepAvalanche(state, dt)
     state.elapsed += dt
-    checkCollisions(state)
+    // Past the tape nothing can touch you — not a stray trunk, not the wall.
+    if (state.coast <= 0) checkCollisions(state)
     stepCombo(state, dt)
-    if (!state.dead && state.y >= finishY(state)) crossFinish()
+    stepFinish(state, dt)
     if (state.dead && !reachSaved) saveReach()
 
     const last = state.trail[state.trail.length - 1]

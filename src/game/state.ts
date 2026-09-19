@@ -3,7 +3,7 @@ import { buildCourse, levelAt, type Course, type Level } from './levels.ts'
 import { AVALANCHE_LEAD_PX } from './avalanche.ts'
 import { resetRock } from './rocks.ts'
 import type { Theme } from './themes.ts'
-import { BALL_SCREEN_Y, LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
+import { cameraYFor, LOGICAL_WIDTH } from './viewport.ts'
 import { PIXELS_PER_METRE, type Particle, type TrailPoint, type Tree } from './world.ts'
 
 export type { Collectible, Particle, Rock, TrailPoint, Tree } from './world.ts'
@@ -55,6 +55,8 @@ export type GameState = {
   started: boolean
   countdown: number
   elapsed: number
+  // Counts down once the tape is crossed: the ball skis on for a beat before the card judges it.
+  coast: number
   score: number
   bestScore: number
   // The furthest a failed attempt on this level got, 0–1. Zero means there is no ghost to draw.
@@ -84,7 +86,7 @@ export type GameState = {
   wallFlashSide: 1 | -1
 }
 
-export const cameraY = (state: GameState): number => state.y - LOGICAL_HEIGHT * BALL_SCREEN_Y
+export const cameraY = (state: GameState): number => cameraYFor(state.y, finishY(state))
 
 export const finishY = (state: GameState): number => state.course.lengthPx
 
@@ -126,6 +128,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     started: false,
     countdown: 0,
     elapsed: 0,
+    coast: 0,
     score: 0,
     bestScore: 0,
     bestReach: 0,
@@ -187,6 +190,7 @@ export const resetRun = (state: GameState): void => {
   state.started = false
   state.countdown = COUNTDOWN_SECONDS
   state.elapsed = 0
+  state.coast = 0
   state.score = 0
   state.combo = 0
   state.comboTimer = 0
