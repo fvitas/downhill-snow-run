@@ -15,10 +15,13 @@
     </div>
     <div
       id="overlay"
-      class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/80 text-white"
+      class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/45 backdrop-blur-md text-white"
       style="display: none"
     >
-      <p id="overlay-message" class="text-lg font-medium tracking-wide"></p>
+      <p
+        id="overlay-message"
+        class="rounded-full border border-white/25 bg-white/15 px-6 py-3 text-lg font-semibold tracking-wide shadow-[0_18px_40px_rgba(15,23,42,0.35)] backdrop-blur-xl"
+      ></p>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

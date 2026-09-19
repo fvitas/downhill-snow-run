@@ -1,5 +1,6 @@
 import { nextStarTarget, starsFor } from '../game/levels.ts'
 import { distanceLeftM, levelProgress, runOver, type GameState } from '../game/state.ts'
+import { applyGlass, applySolid, GLASS, PRESS, isDarkTheme, withAlpha } from './glass.ts'
 
 export type HudActions = {
   onRetry: () => void
@@ -24,7 +25,9 @@ const praiseFor = (combo: number): string => {
 const star = (filled: boolean): HTMLElement => {
   const element = document.createElement('span')
   element.textContent = '★'
-  element.className = filled ? 'text-amber-400' : 'text-stone-300'
+  element.className = filled
+    ? 'text-amber-400 drop-shadow-[0_2px_6px_rgba(245,166,35,0.5)]'
+    : 'opacity-25'
   return element
 }
 
@@ -49,28 +52,29 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   // Pause: a small icon in the corner with a 44 px target around it.
   const pause = button(
     '❚❚',
-    'pointer-events-auto absolute left-1 top-[calc(env(safe-area-inset-top)+0.25rem)] ' +
-      'flex h-11 w-11 items-center justify-center text-sm opacity-60',
+    `${GLASS} ${PRESS} pointer-events-auto absolute left-3 ` +
+      'top-[calc(env(safe-area-inset-top)+0.5rem)] flex h-11 w-11 items-center justify-center ' +
+      'rounded-full text-xs',
     actions.onPause,
   )
 
   const header = document.createElement('div')
   header.className =
-    'absolute inset-x-0 top-[calc(env(safe-area-inset-top)+3rem)] flex flex-col items-center'
+    'absolute inset-x-0 top-[calc(env(safe-area-inset-top)+3.5rem)] flex flex-col items-center'
 
   const barRow = document.createElement('div')
-  barRow.className = 'flex w-[86%] items-center gap-2'
+  barRow.className = `${GLASS} relative flex w-[86%] items-center gap-2 rounded-full p-1.5`
 
   const fromNode = document.createElement('div')
   fromNode.className =
-    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold'
+    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold'
 
   const toNode = document.createElement('div')
   toNode.className =
-    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold'
+    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-bold'
 
   const track = document.createElement('div')
-  track.className = 'relative h-4 grow overflow-hidden rounded-full'
+  track.className = 'relative h-2.5 grow overflow-hidden rounded-full'
 
   const fill = document.createElement('div')
   fill.className = 'absolute inset-y-0 left-0 rounded-full transition-[width] duration-100'
@@ -80,97 +84,118 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
   // Rides the fill head, so the number is always where the progress is.
   const badge = document.createElement('div')
-  badge.className = 'absolute top-0 rounded-md px-2 py-0.5 text-xs font-bold text-white'
+  badge.className =
+    `${GLASS} absolute top-0 rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold tabular-nums`
 
   const badgeRow = document.createElement('div')
-  badgeRow.className = 'relative mt-1 h-5 w-[86%]'
+  badgeRow.className = 'relative mt-1.5 h-6 w-[74%]'
   badgeRow.append(badge)
 
   const scoreLine = document.createElement('div')
-  scoreLine.className = 'mt-7 text-5xl font-bold'
+  scoreLine.className = 'mt-6 text-5xl font-bold tabular-nums tracking-tight'
 
   const comboLine = document.createElement('div')
-  comboLine.className = 'h-5 text-sm font-semibold'
+  comboLine.className = 'h-5 text-sm font-semibold tracking-wide'
 
   header.append(barRow, badgeRow, scoreLine, comboLine)
 
+  // The scene freezes behind the sheet and is blurred out, so the card owns the screen.
   const card = document.createElement('div')
   card.className =
-    'pointer-events-auto absolute inset-0 flex flex-col items-center justify-center gap-3'
+    'pointer-events-auto absolute inset-0 flex items-center justify-center ' +
+    'bg-slate-900/25 backdrop-blur-md'
   card.style.display = 'none'
 
+  const sheet = document.createElement('div')
+  sheet.className =
+    `${GLASS} relative flex w-[78%] flex-col items-center gap-2 rounded-[2rem] px-6 pb-6 pt-7`
+
   const title = document.createElement('div')
-  title.className = 'text-2xl font-bold tracking-widest'
+  title.className = 'text-xl font-bold tracking-[0.3em] opacity-70'
 
   const stars = document.createElement('div')
-  stars.className = 'flex gap-2 text-4xl'
+  stars.className = 'mt-1 flex gap-2 text-4xl'
 
   const finalScore = document.createElement('div')
-  finalScore.className = 'text-6xl font-bold'
+  finalScore.className = 'text-6xl font-bold tabular-nums tracking-tight'
 
   const detail = document.createElement('div')
   detail.className = 'text-sm font-semibold opacity-60'
 
   const buttons = document.createElement('div')
-  buttons.className = 'mt-6 flex flex-col items-center gap-2'
+  buttons.className = 'mt-5 flex w-full flex-col items-stretch gap-2'
 
-  const primary = button('Retry', 'w-44 rounded-lg px-4 py-3 text-base font-bold text-white', () => {
-    if (state.finished) actions.onNext()
-    else actions.onRetry()
-  })
+  const primary = button(
+    'Retry',
+    `${PRESS} relative rounded-2xl border px-4 py-3.5 text-base font-bold`,
+    () => {
+      if (state.finished) actions.onNext()
+      else actions.onRetry()
+    },
+  )
   const crashSite = button(
     'Crash site',
-    'w-44 rounded-lg bg-slate-800/85 px-4 py-2 text-sm font-medium text-slate-100',
+    `${GLASS} ${PRESS} relative rounded-2xl px-4 py-2.5 text-sm font-semibold`,
     actions.onCrashSite,
   )
   const menu = button(
     'Levels',
-    'w-44 rounded-lg px-4 py-2 text-sm font-medium opacity-70',
+    `${PRESS} rounded-2xl px-4 py-2 text-sm font-semibold opacity-60`,
     actions.onMenu,
   )
   buttons.append(primary, crashSite, menu)
-  card.append(title, stars, finalScore, detail, buttons)
+  sheet.append(title, stars, finalScore, detail, buttons)
+  card.append(sheet)
 
   const countdown = document.createElement('div')
-  countdown.className =
-    'absolute inset-0 flex items-center justify-center text-[8rem] font-bold leading-none'
+  countdown.className = 'absolute inset-0 flex items-center justify-center'
   countdown.style.display = 'none'
+
+  const countdownDisc = document.createElement('div')
+  countdownDisc.className =
+    `${GLASS} relative flex h-36 w-36 items-center justify-center rounded-full text-7xl font-bold`
+  countdown.append(countdownDisc)
 
   root.append(pause, header, countdown, card)
 
   let lastScore = -1
+  let cardShown = false
 
   return {
     root,
     update: () => {
       const { theme, level } = state
+      const dark = isDarkTheme(theme)
       // The card waits out the impact hold, so the crash is seen before it is judged.
       const showCard = runOver(state) && !state.inspect.on && state.freeze <= 0
       const counting = !state.started && !runOver(state)
 
       header.style.display = showCard || state.inspect.on ? 'none' : 'flex'
       pause.style.display = showCard || counting || state.inspect.on ? 'none' : 'flex'
+      applyGlass(pause, theme)
       pause.style.color = theme.ink
 
-      fromNode.textContent = String(level.index)
-      fromNode.style.background = theme.ink
-      fromNode.style.color = theme.snow
-      toNode.textContent = level.bonus ? '★' : String(level.index + 1)
-      toNode.style.borderColor = theme.ink
-      toNode.style.color = theme.ink
-      toNode.style.background = theme.snow
+      applyGlass(barRow, theme)
 
-      track.style.background = theme.trail
+      fromNode.textContent = String(level.index)
+      applySolid(fromNode, theme.ink, theme.snow)
+      toNode.textContent = level.bonus ? '★' : String(level.index + 1)
+      applyGlass(toNode, theme, { tint: theme.trail, alpha: dark ? 0.5 : 0.85 })
+      toNode.style.color = theme.ink
+
+      track.style.background = withAlpha(theme.ink, dark ? 0.25 : 0.14)
       const progress = levelProgress(state)
       fill.style.width = `${progress * 100}%`
-      fill.style.background = theme.ink
+      fill.style.background = `linear-gradient(90deg, ${withAlpha(theme.ink, 0.75)}, ${theme.ink})`
 
       badge.textContent = `${distanceLeftM(state)} m`
-      badge.style.background = theme.ink
+      applyGlass(badge, theme)
+      badge.style.color = theme.ink
       badge.style.left = `calc(${progress * 100}% - 1.5rem)`
 
       scoreLine.textContent = String(state.score)
       scoreLine.style.color = theme.ball
+      scoreLine.style.textShadow = `0 4px 18px ${withAlpha(theme.ball, 0.45)}`
       // The number kicks on every tick, the way the original's does.
       if (state.score !== lastScore) {
         scoreLine.animate(
@@ -184,23 +209,52 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       comboLine.style.color = theme.ink
 
       countdown.style.display = counting ? 'flex' : 'none'
-      countdown.style.color = theme.ink
       if (counting) {
+        applyGlass(countdownDisc, theme, { elevated: true })
+        countdownDisc.style.color = theme.ink
         const seconds = Math.ceil(state.countdown)
-        countdown.textContent = seconds > 0 ? String(seconds) : 'GO'
+        const text = seconds > 0 ? String(seconds) : 'GO'
+        if (countdownDisc.textContent !== text) {
+          countdownDisc.textContent = text
+          countdownDisc.animate(
+            [
+              { transform: 'scale(0.82)', opacity: 0.4 },
+              { transform: 'scale(1)', opacity: 1 },
+            ],
+            { duration: 260, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' },
+          )
+        }
       }
 
       card.style.display = showCard ? 'flex' : 'none'
-      if (!showCard) return
+      if (!showCard) {
+        cardShown = false
+        return
+      }
 
-      card.style.background = `${theme.snow}dd`
-      card.style.color = theme.ink
+      // Springs in once per run, not on every frame the card is up.
+      if (!cardShown) {
+        cardShown = true
+        sheet.animate(
+          [
+            { transform: 'scale(0.9) translateY(12px)', opacity: 0 },
+            { transform: 'scale(1) translateY(0)', opacity: 1 },
+          ],
+          { duration: 320, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.1)' },
+        )
+      }
+
+      applyGlass(sheet, theme, { alpha: dark ? 0.72 : 0.82, elevated: true })
+      sheet.style.color = theme.ink
       const crashTitle = state.lastHit?.kind === 'avalanche' ? 'CAUGHT' : 'CRASHED'
       title.textContent = state.finished ? (level.bonus ? 'COLLECTED' : 'FINISH') : crashTitle
       finalScore.textContent = String(state.score)
       finalScore.style.color = theme.ball
-      primary.style.background = theme.ink
+      finalScore.style.textShadow = `0 4px 18px ${withAlpha(theme.ball, 0.4)}`
+      applySolid(primary, theme.ink, theme.snow)
       primary.textContent = state.finished ? 'Next level' : 'Retry'
+      applyGlass(crashSite, theme, { tint: theme.trail, alpha: dark ? 0.5 : 0.8 })
+      crashSite.style.color = theme.ink
       crashSite.style.display = state.finished ? 'none' : 'block'
       menu.style.color = theme.ink
 
