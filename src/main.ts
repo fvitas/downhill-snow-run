@@ -8,6 +8,7 @@ import { stepPhysics } from './game/physics.ts'
 import { clampLevelIndex, starsFor } from './game/levels.ts'
 import { loadProgress, recordOf, recordRun, saveProgress } from './game/progress.ts'
 import { render, stepEffects } from './game/render.ts'
+import { stepRocks } from './game/rocks.ts'
 import { render3d } from './game/render3d.ts'
 import {
   cameraY,
@@ -101,6 +102,7 @@ const stepCountIn = (dt: number): void => {
 
 const stepRun = (dt: number): void => {
   stepPhysics(state, dt)
+  stepRocks(state, dt)
   state.elapsed += dt
   checkCollisions(state)
   stepCombo(state, dt)

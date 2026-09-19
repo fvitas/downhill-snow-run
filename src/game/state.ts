@@ -1,10 +1,11 @@
 import type { TuningConfig } from './config.ts'
 import { buildCourse, levelAt, type Course, type Level } from './levels.ts'
+import { resetRock } from './rocks.ts'
 import type { Theme } from './themes.ts'
 import { BALL_SCREEN_Y, LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
 import { PIXELS_PER_METRE, type Particle, type TrailPoint, type Tree } from './world.ts'
 
-export type { Collectible, Particle, TrailPoint, Tree } from './world.ts'
+export type { Collectible, Particle, Rock, TrailPoint, Tree } from './world.ts'
 export type { Theme } from './themes.ts'
 export type { Course, Level } from './levels.ts'
 export { PIXELS_PER_METRE, TRUNK_HALF_SCALE } from './world.ts'
@@ -19,7 +20,7 @@ export type Wobble = { tree: Tree; age: number; side: 1 | -1 }
 
 // Everything needed to re-judge a crash after the fact, and to draw it magnified.
 export type HitRecord = {
-  kind: 'tree' | 'wall'
+  kind: 'tree' | 'wall' | 'rock'
   score: number
   speed: number
   angleDeg: number
@@ -196,4 +197,5 @@ export const resetRun = (state: GameState): void => {
 
   for (const tree of state.course.trees) tree.grazed = false
   for (const collectible of state.course.collectibles) collectible.taken = false
+  for (const rock of state.course.rocks) resetRock(rock)
 }

@@ -1,6 +1,6 @@
 import { pickChunk, type ChunkTree } from './chunks.ts'
 import { createRng, hashSeed, rngRange, type Rng } from './rng.ts'
-import { PIXELS_PER_METRE, type Collectible, type Tree } from './world.ts'
+import { PIXELS_PER_METRE, type Collectible, type Rock, type Tree } from './world.ts'
 import { themeForWorld, type Theme } from './themes.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
 
@@ -70,6 +70,7 @@ export const levelAt = (rawIndex: number): Level => {
 export type Course = {
   trees: Tree[]
   collectibles: Collectible[]
+  rocks: Rock[]
   lengthPx: number
   // What a run that grazed everything would score — the 2★/3★ bars are cut from it.
   perfectScore: number
@@ -145,16 +146,51 @@ const buildCoinCourse = (level: Level, lengthPx: number): Collectible[] => {
   return collectibles
 }
 
+// Rocks arrive once the slope is busy enough to be read at a glance, and only on tree levels.
+export const ROCKS_FROM_DIFFICULTY = 0.22
+const ROCK_SPACING = 1_400
+
+const buildRocks = (level: Level, lengthPx: number): Rock[] => {
+  if (level.difficulty < ROCKS_FROM_DIFFICULTY) return []
+
+  const rng = createRng(level.seed ^ 0x1c3b)
+  const reach = clamp01((level.difficulty - ROCKS_FROM_DIFFICULTY) / (1 - ROCKS_FROM_DIFFICULTY))
+  const spacing = lerp(ROCK_SPACING, ROCK_SPACING * 0.45, reach)
+  const rocks: Rock[] = []
+
+  for (let y = RUN_IN_PX + spacing; y < lengthPx - RUN_OUT_PX; y += spacing) {
+    const fromLeft = rng() < 0.5
+    const radius = rngRange(rng, 20, 30)
+    const spawnX = fromLeft ? radius : LOGICAL_WIDTH - radius
+    rocks.push({
+      spawnX,
+      spawnY: y + rngRange(rng, -spacing * 0.3, spacing * 0.3),
+      spawnVx: (fromLeft ? 1 : -1) * rngRange(rng, 110, 190) * lerp(0.8, 1.35, reach),
+      // Slower downhill than the ball, so it drifts into view rather than ambushing from behind.
+      vy: level.baseSpeed * rngRange(rng, 0.3, 0.55),
+      radius,
+      x: spawnX,
+      y,
+      vx: 0,
+      angle: 0,
+      rolling: false,
+    })
+  }
+
+  return rocks
+}
+
 export const buildCourse = (level: Level): Course => {
   const lengthPx = level.distanceM * PIXELS_PER_METRE
   if (level.bonus) {
     const collectibles = buildCoinCourse(level, lengthPx)
-    return { trees: [], collectibles, lengthPx, perfectScore: 0 }
+    return { trees: [], collectibles, rocks: [], lengthPx, perfectScore: 0 }
   }
   const trees = buildTreeCourse(level, lengthPx)
   return {
     trees,
     collectibles: [],
+    rocks: buildRocks(level, lengthPx),
     lengthPx,
     perfectScore: Math.max(1, trees.length) * POINTS_PER_TREE,
   }

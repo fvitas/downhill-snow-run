@@ -1,5 +1,6 @@
 import { treeHitExtents } from './collision.ts'
 import { finishY, TRUNK_HALF_SCALE, type GameState, type Theme, type Tree } from './state.ts'
+import { visibleRocks } from './rocks.ts'
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
 
 const drawTrail = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
@@ -290,6 +291,46 @@ const drawCollectibles = (
   }
 }
 
+const ROCK_FILL = '#6b6660'
+const ROCK_DARK = '#4e4a45'
+const ROCK_EDGE = '#3a3733'
+const ROCK_FACETS = 7
+
+// A lumpy polygon rather than a circle: the facets are what make the spin readable.
+const drawRocks = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
+  for (const rock of visibleRocks(state, camY)) {
+    const screenY = rock.y - camY
+
+    ctx.fillStyle = state.theme.shadow
+    ctx.beginPath()
+    ctx.ellipse(rock.x + 3, screenY + rock.radius * 0.55, rock.radius, rock.radius * 0.4, 0, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.save()
+    ctx.translate(rock.x, screenY)
+    ctx.rotate(rock.angle)
+
+    ctx.beginPath()
+    for (let i = 0; i < ROCK_FACETS; i += 1) {
+      const a = (i / ROCK_FACETS) * Math.PI * 2
+      const r = rock.radius * (i % 2 === 0 ? 1 : 0.86)
+      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r)
+    }
+    ctx.closePath()
+    ctx.fillStyle = ROCK_FILL
+    ctx.fill()
+    ctx.strokeStyle = ROCK_EDGE
+    ctx.lineWidth = 2
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.arc(rock.radius * 0.22, rock.radius * 0.24, rock.radius * 0.45, 0, Math.PI * 2)
+    ctx.fillStyle = ROCK_DARK
+    ctx.fill()
+    ctx.restore()
+  }
+}
+
 const FINISH_CHECK = '#3f4a5a'
 const FINISH_TAPE = '#efe9db'
 const FINISH_SQUARE = 12
@@ -431,6 +472,7 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   for (const tree of visible) {
     if (tree.y > state.y) drawTreeAt(ctx, state, tree, camY)
   }
+  drawRocks(ctx, state, camY)
 
   drawPops(ctx, state, camY)
   if (state.inspect.on) drawHitboxes(ctx, state, camY)

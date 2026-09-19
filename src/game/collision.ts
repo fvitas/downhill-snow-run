@@ -1,5 +1,5 @@
 import { burst } from './particles.ts'
-import { TRUNK_HALF_SCALE, type GameState, type HitRecord, type Tree } from './state.ts'
+import { TRUNK_HALF_SCALE, type GameState, type HitRecord, type Rock, type Tree } from './state.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
 
 const SCAN_WINDOW = 120
@@ -46,6 +46,12 @@ const ballXAt = (state: GameState, y: number): number => {
 
 const comboPoints = (combo: number): number =>
   Math.min(COMBO_CAP, COMBO_BASE * 2 ** Math.max(0, combo - 1))
+
+// Rocks move, so the ellipse trick used for trunks does not apply: plain circle against the step.
+const hitRock = (state: GameState, rock: Rock): boolean => {
+  const reach = rock.radius + state.tuning.ballRadius - 4
+  return distanceToStepSq(state, rock.x, rock.y, 1) <= reach * reach
+}
 
 const kill = (state: GameState, kind: HitRecord['kind'], tree: Tree | null): void => {
   state.dead = true
@@ -108,6 +114,15 @@ export const checkCollisions = (state: GameState): void => {
     state.wallFlashSide = state.x <= r ? -1 : 1
     kill(state, 'wall', null)
     return
+  }
+
+  for (const rock of state.course.rocks) {
+    if (!rock.rolling) continue
+    if (Math.abs(rock.y - state.y) > SCAN_WINDOW) continue
+    if (hitRock(state, rock)) {
+      kill(state, 'rock', null)
+      return
+    }
   }
 
   const { trees } = state

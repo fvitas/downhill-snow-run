@@ -18,6 +18,21 @@ export type Collectible = {
   taken: boolean
 }
 
+// Crosses the slope and tumbles downhill slower than the ball, so you close on it from behind.
+// The spawn fields are the seeded ones; x/y/vx/angle are live and reset with the run.
+export type Rock = {
+  spawnX: number
+  spawnY: number
+  spawnVx: number
+  vy: number
+  radius: number
+  x: number
+  y: number
+  vx: number
+  angle: number
+  rolling: boolean
+}
+
 export type TrailPoint = { x: number; y: number }
 
 export type Particle = {
