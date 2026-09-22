@@ -1,6 +1,12 @@
 import { pickChunk, TREE_MARGIN, type ChunkTree } from './chunks.ts'
 import { createRng, hashSeed, rngInt, rngPick, rngRange, type Rng } from './rng.ts'
-import { PIXELS_PER_METRE, type Collectible, type Rock, type Tree } from './world.ts'
+import {
+  METRES_PER_POINT,
+  PIXELS_PER_METRE,
+  type Collectible,
+  type Rock,
+  type Tree,
+} from './world.ts'
 import { themeForWorld, type Theme } from './themes.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
 
@@ -82,7 +88,8 @@ export type Course = {
   collectibles: Collectible[]
   rocks: Rock[]
   lengthPx: number
-  // What a run that grazed everything would score — the 2★/3★ bars are cut from it.
+  // What a run that grazed everything and skied the whole level would score — the 2★/3★ bars
+  // are cut from it.
   perfectScore: number
 }
 
@@ -363,7 +370,9 @@ export const buildCourse = (level: Level): Course => {
     collectibles: [],
     rocks: fillRocks(createRng(level.seed ^ 0x1c3b), level, RUN_IN_PX, slopeEndPx(lengthPx)),
     lengthPx,
-    perfectScore: Math.max(1, trees.length) * POINTS_PER_TREE,
+    perfectScore:
+      Math.max(1, trees.length) * POINTS_PER_TREE +
+      Math.round(level.distanceM / METRES_PER_POINT),
   }
 }
 

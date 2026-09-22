@@ -1,8 +1,8 @@
 export const LOGICAL_WIDTH = 540
 export const LOGICAL_HEIGHT = 960
 
-// Ball rides in the upper third; the slope ahead fills the rest of the screen below it.
-export const BALL_SCREEN_Y = 0.3
+// Ball rides just below the upper third, clear of the HUD; the slope ahead fills the screen below.
+export const BALL_SCREEN_Y = 0.36
 
 // Where the tape comes to rest. The last stretch is skied, not scrolled: the camera brakes to a
 // stop so the finish settles here and the ball slides down the screen to meet it.

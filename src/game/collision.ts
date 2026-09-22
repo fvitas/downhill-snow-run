@@ -4,7 +4,6 @@ import { TRUNK_HALF_SCALE, type GameState, type HitRecord, type Rock, type Tree 
 import { LOGICAL_WIDTH } from './viewport.ts'
 
 const SCAN_WINDOW = 120
-const COMBO_SECONDS = 1.6
 const COMBO_BASE = 2
 const COMBO_STEP = 2
 const COMBO_CAP = 32
@@ -78,7 +77,6 @@ const kill = (state: GameState, kind: HitRecord['kind'], tree: Tree | null): voi
 const graze = (state: GameState, tree: Tree, ballX: number): void => {
   tree.grazed = true
   state.combo += 1
-  state.comboTimer = COMBO_SECONDS
   const gain = comboPoints(state.combo)
   state.score += gain
   state.pops.push({ x: tree.x, y: tree.y - 24, text: `+${gain}`, life: 1 })
@@ -157,8 +155,3 @@ export const checkCollisions = (state: GameState): void => {
   }
 }
 
-export const stepCombo = (state: GameState, dt: number): void => {
-  if (state.comboTimer <= 0) return
-  state.comboTimer -= dt
-  if (state.comboTimer <= 0) state.combo = 0
-}

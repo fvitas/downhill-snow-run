@@ -50,3 +50,6 @@ export type Particle = {
 export const TRUNK_HALF_SCALE = 0.165
 
 export const PIXELS_PER_METRE = 10
+// Ground covered pays a point every this many metres, so a clean line that finds no tree to graze
+// is still worth something.
+export const METRES_PER_POINT = 10

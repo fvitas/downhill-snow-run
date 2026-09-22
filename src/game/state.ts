@@ -4,7 +4,13 @@ import { AVALANCHE_LEAD_PX } from './avalanche.ts'
 import { resetRock } from './rocks.ts'
 import type { Theme } from './themes.ts'
 import { cameraYFor, LOGICAL_WIDTH } from './viewport.ts'
-import { PIXELS_PER_METRE, type Particle, type TrailPoint, type Tree } from './world.ts'
+import {
+  METRES_PER_POINT,
+  PIXELS_PER_METRE,
+  type Particle,
+  type TrailPoint,
+  type Tree,
+} from './world.ts'
 
 export type { Collectible, Particle, Rock, TrailPoint, Tree } from './world.ts'
 export type { Theme } from './themes.ts'
@@ -58,11 +64,13 @@ export type GameState = {
   // Counts down once the tape is crossed: the ball skis on for a beat before the card judges it.
   coast: number
   score: number
+  // Points already paid out for ground covered, so a frame only ever pays the new metres.
+  distanceScore: number
   bestScore: number
   // The furthest a failed attempt on this level got, 0–1. Zero means there is no ghost to draw.
   bestReach: number
+  // A chain of near misses, only broken by a crash.
   combo: number
-  comboTimer: number
   runCoins: number
   runDiamonds: number
   // Leading edge of the wall, in world y. Only advanced on avalanche levels.
@@ -99,6 +107,15 @@ export const distanceLeftM = (state: GameState): number =>
 export const levelProgress = (state: GameState): number =>
   Math.min(1, Math.max(0, state.y / Math.max(1, finishY(state))))
 
+// Distance is banked in whole points off the ball's own y, so a slow frame or a stutter can never
+// pay twice for the same stretch of slope.
+export const scoreDistance = (state: GameState): void => {
+  const earned = Math.floor(state.y / (PIXELS_PER_METRE * METRES_PER_POINT))
+  if (earned <= state.distanceScore) return
+  state.score += earned - state.distanceScore
+  state.distanceScore = earned
+}
+
 // Crashed or finished — either way the run is over and taps only restart it.
 export const runOver = (state: GameState): boolean => state.dead || state.finished
 
@@ -133,10 +150,10 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     elapsed: 0,
     coast: 0,
     score: 0,
+    distanceScore: 0,
     bestScore: 0,
     bestReach: 0,
     combo: 0,
-    comboTimer: 0,
     runCoins: 0,
     runDiamonds: 0,
     avalancheY: -AVALANCHE_LEAD_PX,
@@ -195,8 +212,8 @@ export const resetRun = (state: GameState): void => {
   state.elapsed = 0
   state.coast = 0
   state.score = 0
+  state.distanceScore = 0
   state.combo = 0
-  state.comboTimer = 0
   state.runCoins = 0
   state.runDiamonds = 0
   state.avalancheY = -AVALANCHE_LEAD_PX

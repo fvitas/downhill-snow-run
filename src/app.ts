@@ -1,6 +1,6 @@
 import { DEFAULT_PRESET } from './game/config.ts'
 import { stepAvalanche } from './game/avalanche.ts'
-import { checkCollisions, stepCombo } from './game/collision.ts'
+import { checkCollisions } from './game/collision.ts'
 import { attachInput } from './game/input.ts'
 import { attachPause, tryLockPortrait } from './game/pause.ts'
 import { emitSpray, stepParticles } from './game/particles.ts'
@@ -18,6 +18,7 @@ import {
   PIXELS_PER_METRE,
   runActive,
   runOver,
+  scoreDistance,
   startLevel,
   COUNTDOWN_SECONDS,
   type GameState,
@@ -152,13 +153,13 @@ export const createGame = (mount: GameMount): Game => {
 
   const stepRun = (dt: number): void => {
     stepPhysics(state, dt)
+    scoreDistance(state)
     extendCourse(state.level, state.course, state.y)
     stepRocks(state, dt)
     stepAvalanche(state, dt)
     state.elapsed += dt
     // Past the tape nothing can touch you — not a stray trunk, not the wall.
     if (state.coast <= 0) checkCollisions(state)
-    stepCombo(state, dt)
     stepFinish(state, dt)
     if (state.dead && !reachSaved) saveReach()
 

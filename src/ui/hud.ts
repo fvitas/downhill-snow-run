@@ -21,7 +21,21 @@ export type Hud = {
   update: () => void
 }
 
-const PRAISE = ['Clean!', 'Carving!', 'Sending it!', 'Full send!']
+const PRAISE = [
+  'Clean!',
+  'Smooth!',
+  'Wow!',
+  'Send it!',
+  'Amazing!',
+  'On fire!',
+  'Full send!',
+  'Master!',
+  'Unstoppable!',
+  'Godlike!',
+  'Snow king!',
+  'Mountain king!',
+  'Ski god!',
+]
 
 // Lucide's `pause`, inlined — one icon does not justify the dependency. Solid bars, not the
 // stroked default, so it still reads at arm's length on the slope.
@@ -31,9 +45,21 @@ const PAUSE_ICON =
   '<rect x="6" y="3" width="4" height="18" rx="1.5" />' +
   '</svg>'
 
+// Rungs sit two near misses apart at the bottom, three from `Amazing!` and four from
+// `Unstoppable!`, so the top of the ladder takes real work to reach.
+const WIDE_FROM = PRAISE.indexOf('Amazing!')
+const WIDER_FROM = PRAISE.indexOf('Unstoppable!')
+
+const rungWidth = (rung: number): number => (rung >= WIDER_FROM ? 4 : rung >= WIDE_FROM ? 3 : 2)
+
 const praiseFor = (combo: number): string => {
-  const index = Math.min(PRAISE.length - 1, Math.floor((combo - 2) / 2))
-  return PRAISE[index] ?? ''
+  let left = Math.max(0, combo - 2)
+  let rung = 0
+  while (rung < PRAISE.length - 1 && left >= rungWidth(rung)) {
+    left -= rungWidth(rung)
+    rung += 1
+  }
+  return PRAISE[rung] ?? ''
 }
 
 const star = (filled: boolean): HTMLElement => {
@@ -159,10 +185,10 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   endlessPill.textContent = 'ENDLESS'
 
   const scoreLine = document.createElement('div')
-  scoreLine.className = 'mt-4 text-5xl font-bold tabular-nums tracking-tight'
+  scoreLine.className = 'mt-4 text-6xl font-bold tabular-nums tracking-tight'
 
   const comboLine = document.createElement('div')
-  comboLine.className = 'h-5 text-sm font-semibold tracking-wide'
+  comboLine.className = 'h-7 text-xl font-semibold tracking-wide'
 
   header.append(ghostRow, barRow, badgeRow, endlessPill, scoreLine, comboLine)
 
@@ -227,7 +253,6 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
   root.append(pause, header, countdown, card)
 
-  let lastScore = -1
   let cardShown = false
 
   return {
@@ -302,14 +327,6 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       scoreLine.textContent = String(state.score)
       scoreLine.style.color = world.ball
       scoreLine.style.textShadow = `0 2px 10px ${withAlpha(world.ball, 0.22)}`
-      // The number kicks on every tick, the way the original's does.
-      if (state.score !== lastScore) {
-        scoreLine.animate(
-          [{ transform: 'scale(1.18)' }, { transform: 'scale(1)' }],
-          { duration: 160, easing: 'ease-out' },
-        )
-        lastScore = state.score
-      }
 
       comboLine.textContent = state.combo > 1 ? `${praiseFor(state.combo)} ×${state.combo}` : ''
       comboLine.style.color = world.ink
