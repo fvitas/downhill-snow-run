@@ -467,6 +467,40 @@ const drawBall = (ctx: CanvasRenderingContext2D, state: GameState, camY: number)
   ctx.stroke()
 }
 
+// How wide the drift is and how far its flat base sits below the ball, both in ball radii. The
+// base is buried, so only the dome's crown ever shows.
+const DRIFT_RADIUS = 1.7
+const DRIFT_SINK = 1.6
+
+// The wreck goes into a drift at the trunk's root: a dome of plain slope snow over the ball, so
+// only its crown is left showing. Drawn in the background colour, so it reads as the ball sinking
+// in rather than as a shape laid on top of it.
+const drawDrift = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
+  const tree = state.hitTree
+  if (!tree) return
+  // The shake decays from 1 over a quarter second, which is exactly the drift's rise.
+  const rise = 1 - state.shake
+  if (rise <= 0) return
+
+  const r = state.tuning.ballRadius
+  const baseY = state.y - camY + r * DRIFT_SINK
+  const radius = r * DRIFT_RADIUS * rise
+
+  ctx.fillStyle = state.theme.snow
+  ctx.beginPath()
+  ctx.arc(state.x, baseY, radius, Math.PI, Math.PI * 2)
+  ctx.closePath()
+  ctx.fill()
+
+  // Opaque snow resets the patch it covers, erasing that patch's share of the trunk's shadow.
+  // Clipping the shadow back inside the dome restores it without doubling it up anywhere else,
+  // which would darken the trunk's base into murk and leave the pine looking cut short.
+  ctx.save()
+  ctx.clip()
+  drawShadow(ctx, state.theme, tree.x, tree.y - camY, tree.radius)
+  ctx.restore()
+}
+
 const HITBOX = 'rgba(239, 68, 68, 0.75)'
 const STEP_LINE = 'rgba(37, 99, 235, 0.9)'
 
@@ -534,6 +568,8 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
     if (tree.y <= state.y && tree !== state.hitTree) drawTreeAt(ctx, state, tree, camY)
   }
   drawBall(ctx, state, camY)
+  // Under the trunk it crashed into: the root sits on the drift, not behind it.
+  drawDrift(ctx, state, camY)
   for (const tree of visible) {
     if (tree.y > state.y || tree === state.hitTree) drawTreeAt(ctx, state, tree, camY)
   }
