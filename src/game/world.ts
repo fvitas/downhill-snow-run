@@ -35,6 +35,10 @@ export type Rock = {
 
 export type TrailPoint = { x: number; y: number }
 
+// Spray is the dust off the skis; clods are the packed snow a crash throws. Clods fly harder,
+// last longer and draw over the trees, so a wreck behind a trunk still reads.
+export type ParticleKind = 'spray' | 'clod'
+
 export type Particle = {
   x: number
   y: number
@@ -43,6 +47,7 @@ export type Particle = {
   life: number
   maxLife: number
   size: number
+  kind: ParticleKind
 }
 
 // Trunk half-width as a fraction of the canopy radius. The renderer and the hitbox share it so

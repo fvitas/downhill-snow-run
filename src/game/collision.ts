@@ -10,8 +10,10 @@ const COMBO_CAP = 32
 const COIN_RADIUS = 30
 const COIN_POINTS = 5
 const DIAMOND_POINTS = 50
-const FREEZE_SECONDS = 0.4
-const SHAKE_SECONDS = 0.22
+// How long the wreck is left on screen — shake, thrown snow and all — before the card covers it.
+const FREEZE_SECONDS = 1.1
+// Shake strength at the moment of impact; stepEffects bleeds it off over a quarter second.
+const SHAKE_KICK = 1
 
 // Trunk only — the canopy triangles are decoration — minus a few pixels so a scrape down the side
 // of the pole isn't a crash. Shallow in y: brushing past in front of a trunk should read as a pass.
@@ -60,7 +62,7 @@ const kill = (state: GameState, kind: HitRecord['kind'], tree: Tree | null): voi
   state.pressed = false
   state.combo = 0
   state.freeze = FREEZE_SECONDS
-  state.shake = SHAKE_SECONDS
+  state.shake = SHAKE_KICK
   state.hitTree = tree
   state.lastHit = {
     kind,
@@ -71,7 +73,7 @@ const kill = (state: GameState, kind: HitRecord['kind'], tree: Tree | null): voi
     step: { fromX: state.prevX, fromY: state.prevY, toX: state.x, toY: state.y },
     tree: tree ? { x: tree.x, y: tree.y, radius: tree.radius, ...treeHitExtents(state, tree) } : null,
   }
-  burst(state, state.x, state.y, 26)
+  burst(state, state.x, state.y, 30, 'clod')
 }
 
 const graze = (state: GameState, tree: Tree, ballX: number): void => {

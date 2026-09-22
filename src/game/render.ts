@@ -1,5 +1,12 @@
 import { treeHitExtents } from './collision.ts'
-import { finishY, TRUNK_HALF_SCALE, type GameState, type Theme, type Tree } from './state.ts'
+import {
+  finishY,
+  TRUNK_HALF_SCALE,
+  type GameState,
+  type ParticleKind,
+  type Theme,
+  type Tree,
+} from './state.ts'
 import { visibleRocks } from './rocks.ts'
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
 
@@ -399,15 +406,25 @@ const drawFinish = (ctx: CanvasRenderingContext2D, state: GameState, camY: numbe
   }
 }
 
-const drawParticles = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
+// Spray goes down with the slope, under the ball that threw it; crash clods go over the top of
+// the wreck, so the snow is still readable with the ball buried behind a trunk.
+const drawParticles = (
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  camY: number,
+  kind: ParticleKind,
+): void => {
   for (const particle of state.particles) {
+    if (particle.kind !== kind) continue
     const screenY = particle.y - camY
     if (screenY < -20 || screenY > LOGICAL_HEIGHT + 20) continue
-    ctx.fillStyle = `rgba(255, 255, 255, ${(particle.life / particle.maxLife) * 0.9})`
+    ctx.globalAlpha = (particle.life / particle.maxLife) * 0.9
+    ctx.fillStyle = '#ffffff'
     ctx.beginPath()
     ctx.arc(particle.x, screenY, particle.size, 0, Math.PI * 2)
     ctx.fill()
   }
+  ctx.globalAlpha = 1
 }
 
 const POP_RISE = 46
@@ -488,7 +505,8 @@ const applyInspect = (ctx: CanvasRenderingContext2D, state: GameState, camY: num
   ctx.translate(-focusX, -focusY)
 }
 
-const SHAKE_PX = 7
+// Peak throw of the crash shake at full strength, split either side of centre: mockups/shake.html.
+const SHAKE_PX = 14
 
 export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
   ctx.fillStyle = state.theme.snow
@@ -504,7 +522,7 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   drawFinish(ctx, state, camY)
   drawTrail(ctx, state, camY)
   drawCollectibles(ctx, state, camY)
-  drawParticles(ctx, state, camY)
+  drawParticles(ctx, state, camY, 'spray')
 
   const visible = visibleTrees(state)
   for (const tree of visible) drawShadow(ctx, state.theme, tree.x, tree.y - camY, tree.radius)
@@ -519,6 +537,7 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   for (const tree of visible) {
     if (tree.y > state.y || tree === state.hitTree) drawTreeAt(ctx, state, tree, camY)
   }
+  drawParticles(ctx, state, camY, 'clod')
   drawRocks(ctx, state, camY)
   drawAvalanche(ctx, state, camY)
 

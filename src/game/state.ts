@@ -12,7 +12,7 @@ import {
   type Tree,
 } from './world.ts'
 
-export type { Collectible, Particle, Rock, TrailPoint, Tree } from './world.ts'
+export type { Collectible, Particle, ParticleKind, Rock, TrailPoint, Tree } from './world.ts'
 export type { Theme } from './themes.ts'
 export type { Course, Level } from './levels.ts'
 export { PIXELS_PER_METRE, TRUNK_HALF_SCALE } from './world.ts'
@@ -75,7 +75,7 @@ export type GameState = {
   runDiamonds: number
   // Leading edge of the wall, in world y. Only advanced on avalanche levels.
   avalancheY: number
-  // Impact hold and the small kick that follows it, both counting down to zero.
+  // The impact hold, in seconds, and the crash shake as a 0–1 strength. Both count down to zero.
   freeze: number
   shake: number
   lastHit: HitRecord | null

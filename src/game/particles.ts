@@ -1,4 +1,4 @@
-import type { GameState, Particle } from './state.ts'
+import type { GameState, Particle, ParticleKind } from './state.ts'
 
 const MAX_PARTICLES = 240
 const BASE_RATE = 130
@@ -7,7 +7,7 @@ const REFERENCE_SPEED = 400
 const pool: Particle[] = []
 
 const take = (): Particle =>
-  pool.pop() ?? { x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, size: 0 }
+  pool.pop() ?? { x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, size: 0, kind: 'spray' }
 
 const release = (particle: Particle): void => {
   if (pool.length < MAX_PARTICLES) pool.push(particle)
@@ -27,6 +27,7 @@ const spawn = (state: GameState, carve: number): void => {
   particle.maxLife = 0.32 + Math.random() * 0.35
   particle.life = particle.maxLife
   particle.size = 1.1 + Math.random() * 2.3
+  particle.kind = 'spray'
   state.particles.push(particle)
 }
 
@@ -41,19 +42,30 @@ export const emitSpray = (state: GameState, dt: number): void => {
   }
 }
 
-export const burst = (state: GameState, x: number, y: number, count: number): void => {
+// Clods are thrown harder and hang around roughly twice as long, so a crash has snow in the air
+// for the whole beat before the card slides up.
+export const burst = (
+  state: GameState,
+  x: number,
+  y: number,
+  count: number,
+  kind: ParticleKind = 'spray',
+): void => {
+  const clod = kind === 'clod'
+
   for (let i = 0; i < count && state.particles.length < MAX_PARTICLES; i += 1) {
     const angle = Math.random() * Math.PI * 2
-    const speed = 60 + Math.random() * 220
+    const speed = (clod ? 90 : 60) + Math.random() * (clod ? 300 : 220)
 
     const particle = take()
     particle.x = x
     particle.y = y
     particle.vx = Math.cos(angle) * speed
     particle.vy = Math.sin(angle) * speed
-    particle.maxLife = 0.3 + Math.random() * 0.4
+    particle.maxLife = clod ? 0.6 + Math.random() * 0.55 : 0.3 + Math.random() * 0.4
     particle.life = particle.maxLife
-    particle.size = 2 + Math.random() * 3
+    particle.size = clod ? 2.4 + Math.random() * 4 : 2 + Math.random() * 3
+    particle.kind = kind
     state.particles.push(particle)
   }
 }
