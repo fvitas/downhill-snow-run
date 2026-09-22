@@ -125,13 +125,19 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   badgeRow.className = 'relative h-6 w-full'
   badgeRow.append(badgeTail, badge)
 
+  // Level 500 has no tape to reach, so it gets no bar and no percentage — this stands in for the
+  // whole row, and the score below it is the only number on the screen.
+  const endlessPill = document.createElement('div')
+  endlessPill.className = 'rounded-full px-4 py-1.5 text-[0.7rem] font-bold tracking-[0.35em]'
+  endlessPill.textContent = 'ENDLESS'
+
   const scoreLine = document.createElement('div')
   scoreLine.className = 'mt-4 text-5xl font-bold tabular-nums tracking-tight'
 
   const comboLine = document.createElement('div')
   comboLine.className = 'h-5 text-sm font-semibold tracking-wide'
 
-  header.append(ghostRow, barRow, badgeRow, scoreLine, comboLine)
+  header.append(ghostRow, barRow, badgeRow, endlessPill, scoreLine, comboLine)
 
   // The scene freezes behind the sheet and is blurred out, so the card owns the screen.
   const card = document.createElement('div')
@@ -216,51 +222,57 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       applyGlass(pause, theme)
       pause.style.color = theme.ink
 
-      applyGlass(barRow, theme)
+      for (const row of [ghostRow, barRow, badgeRow]) row.style.display = level.endless ? 'none' : ''
+      endlessPill.style.display = level.endless ? 'block' : 'none'
+      if (level.endless) applySolid(endlessPill, theme.ink, theme.snow)
 
-      fromNode.textContent = String(level.index)
-      applySolid(fromNode, theme.ink, theme.snow)
-      toNode.textContent = level.bonus ? '★' : String(level.index + 1)
-      applyGlass(toNode, theme, { tint: theme.trail, alpha: dark ? 0.5 : 0.85 })
-      toNode.style.color = theme.ink
+      if (!level.endless) {
+        applyGlass(barRow, theme)
 
-      track.style.background = withAlpha(theme.ink, dark ? 0.25 : 0.14)
-      const progress = levelProgress(state)
-      // The head is inside the bar, so the tooltips are placed off the track's own offsets —
-      // layout px, so a CSS transform on the stage cannot skew them.
-      const headXAt = (fraction: number, row: HTMLElement): number =>
-        barRow.offsetLeft + track.offsetLeft - row.offsetLeft + fraction * track.offsetWidth
-      fill.style.width = `${progress * 100}%`
-      fill.style.background = `linear-gradient(90deg, ${withAlpha(theme.ink, 0.75)}, ${theme.ink})`
+        fromNode.textContent = String(level.index)
+        applySolid(fromNode, theme.ink, theme.snow)
+        toNode.textContent = level.bonus ? '★' : String(level.index + 1)
+        applyGlass(toNode, theme, { tint: theme.trail, alpha: dark ? 0.5 : 0.85 })
+        toNode.style.color = theme.ink
 
-      // The ghost only lives until the live fill draws level with it — past that there is nothing
-      // left to chase, and a mark behind you is just clutter.
-      const ghostOn = state.bestReach > 0 && progress < state.bestReach
-      ghost.style.display = ghostOn ? 'block' : 'none'
-      ghostBadge.style.display = ghostOn ? 'block' : 'none'
-      if (ghostOn) {
-        ghost.style.width = `${state.bestReach * 100}%`
-        ghost.style.background = withAlpha(theme.ink, dark ? 0.4 : 0.3)
-        ghostBadge.textContent = `${Math.round(state.bestReach * 100)}%`
-        ghostBadge.style.color = withAlpha(theme.ink, 0.45)
-        ghostBadge.style.left = `${headXAt(state.bestReach, ghostRow)}px`
-        ghostBadge.style.transform = 'translateX(calc(-50% + 4px))'
+        track.style.background = withAlpha(theme.ink, dark ? 0.25 : 0.14)
+        const progress = levelProgress(state)
+        // The head is inside the bar, so the tooltips are placed off the track's own offsets —
+        // layout px, so a CSS transform on the stage cannot skew them.
+        const headXAt = (fraction: number, row: HTMLElement): number =>
+          barRow.offsetLeft + track.offsetLeft - row.offsetLeft + fraction * track.offsetWidth
+        fill.style.width = `${progress * 100}%`
+        fill.style.background = `linear-gradient(90deg, ${withAlpha(theme.ink, 0.75)}, ${theme.ink})`
+
+        // The ghost only lives until the live fill draws level with it — past that there is nothing
+        // left to chase, and a mark behind you is just clutter.
+        const ghostOn = state.bestReach > 0 && progress < state.bestReach
+        ghost.style.display = ghostOn ? 'block' : 'none'
+        ghostBadge.style.display = ghostOn ? 'block' : 'none'
+        if (ghostOn) {
+          ghost.style.width = `${state.bestReach * 100}%`
+          ghost.style.background = withAlpha(theme.ink, dark ? 0.4 : 0.3)
+          ghostBadge.textContent = `${Math.round(state.bestReach * 100)}%`
+          ghostBadge.style.color = withAlpha(theme.ink, 0.45)
+          ghostBadge.style.left = `${headXAt(state.bestReach, ghostRow)}px`
+          ghostBadge.style.transform = 'translateX(calc(-50% + 4px))'
+        }
+
+        badge.textContent = `${Math.round(progress * 100)}%`
+        applyGlass(badge, theme, { tint: theme.snow, alpha: dark ? 0.4 : 0.62 })
+        badge.style.color = theme.ink
+        const headX = headXAt(progress, badgeRow)
+        badge.style.left = `${headX}px`
+        badge.style.transform = 'translateX(-50%)'
+        badgeTail.style.left = `${headX}px`
+        badgeTail.style.transform = 'translateX(-50%) rotate(45deg)'
+        applyGlass(badgeTail, theme, { tint: theme.snow, alpha: dark ? 0.4 : 0.62 })
+        badgeTail.style.boxShadow = 'none'
+        // The chips sit inside the pill, where their own drop reads as a blue glow trapped in it.
+        // The tooltip hangs below it, so it gets a shallow one to lift it off the slope.
+        for (const node of [fromNode, toNode]) node.style.boxShadow = 'none'
+        badge.style.boxShadow = `0 2px 5px ${withAlpha(theme.ink, dark ? 0.3 : 0.14)}`
       }
-
-      badge.textContent = `${Math.round(progress * 100)}%`
-      applyGlass(badge, theme, { tint: theme.snow, alpha: dark ? 0.4 : 0.62 })
-      badge.style.color = theme.ink
-      const headX = headXAt(progress, badgeRow)
-      badge.style.left = `${headX}px`
-      badge.style.transform = 'translateX(-50%)'
-      badgeTail.style.left = `${headX}px`
-      badgeTail.style.transform = 'translateX(-50%) rotate(45deg)'
-      applyGlass(badgeTail, theme, { tint: theme.snow, alpha: dark ? 0.4 : 0.62 })
-      badgeTail.style.boxShadow = 'none'
-      // The chips sit inside the pill, where their own drop reads as a blue glow trapped in it.
-      // The tooltip hangs below it, so it gets a shallow one to lift it off the slope.
-      for (const node of [fromNode, toNode]) node.style.boxShadow = 'none'
-      badge.style.boxShadow = `0 2px 5px ${withAlpha(theme.ink, dark ? 0.3 : 0.14)}`
 
       scoreLine.textContent = String(state.score)
       scoreLine.style.color = world.ball

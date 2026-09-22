@@ -5,7 +5,7 @@ import { attachInput } from './game/input.ts'
 import { attachPause, tryLockPortrait } from './game/pause.ts'
 import { emitSpray, stepParticles } from './game/particles.ts'
 import { stepPhysics } from './game/physics.ts'
-import { clampLevelIndex, starsFor } from './game/levels.ts'
+import { clampLevelIndex, extendCourse, starsFor } from './game/levels.ts'
 import { loadProgress, recordOf, recordReach, recordRun, saveProgress } from './game/progress.ts'
 import { render, stepEffects } from './game/render.ts'
 import { stepRocks } from './game/rocks.ts'
@@ -152,6 +152,7 @@ export const createGame = (mount: GameMount): Game => {
 
   const stepRun = (dt: number): void => {
     stepPhysics(state, dt)
+    extendCourse(state.level, state.course, state.y)
     stepRocks(state, dt)
     stepAvalanche(state, dt)
     state.elapsed += dt

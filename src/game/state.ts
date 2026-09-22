@@ -88,7 +88,10 @@ export type GameState = {
 
 export const cameraY = (state: GameState): number => cameraYFor(state.y, finishY(state))
 
-export const finishY = (state: GameState): number => state.course.lengthPx
+// The endless level has no tape to reach, so nothing ever crosses it: the camera never brakes,
+// the bar never fills and the finish band is never drawn.
+export const finishY = (state: GameState): number =>
+  state.level.endless ? Infinity : state.course.lengthPx
 
 export const distanceLeftM = (state: GameState): number =>
   Math.max(0, Math.round((finishY(state) - state.y) / PIXELS_PER_METRE))

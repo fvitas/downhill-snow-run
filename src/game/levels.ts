@@ -5,7 +5,7 @@ import { themeForWorld, type Theme } from './themes.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
 
 export const LEVELS_PER_WORLD = 50
-export const WORLD_COUNT = 20
+export const WORLD_COUNT = 10
 export const LEVEL_COUNT = LEVELS_PER_WORLD * WORLD_COUNT
 // Every tenth level is the coin run: no trees, no death, pure reward.
 export const BONUS_EVERY = 10
@@ -20,6 +20,9 @@ export type Level = {
   theme: Theme
   bonus: boolean
   avalanche: boolean
+  // The last level has no tape and no bar: the same downhill run as the other 499, it just never
+  // ends. The slope is built a block at a time as you reach it.
+  endless: boolean
   seed: number
   difficulty: number
   distanceM: number
@@ -53,7 +56,8 @@ export const levelAt = (rawIndex: number): Level => {
   const world = worldOf(index)
   const indexInWorld = index - (world - 1) * LEVELS_PER_WORLD
   const difficulty = difficultyOf(world, indexInWorld)
-  const bonus = index % BONUS_EVERY === 0
+  const endless = index === LEVEL_COUNT
+  const bonus = !endless && index % BONUS_EVERY === 0
 
   return {
     index,
@@ -61,7 +65,8 @@ export const levelAt = (rawIndex: number): Level => {
     indexInWorld,
     theme: themeForWorld(world),
     bonus,
-    avalanche: !bonus && index >= AVALANCHE_FROM_LEVEL && index % AVALANCHE_EVERY === 0,
+    avalanche: !bonus && !endless && index >= AVALANCHE_FROM_LEVEL && index % AVALANCHE_EVERY === 0,
+    endless,
     seed: hashSeed(index, SEED_SALT),
     difficulty,
     distanceM: bonus ? 500 : Math.round(lerp(400, 900, difficulty) / 10) * 10,
@@ -140,9 +145,8 @@ const tryStray = (rng: Rng, trees: Tree[], y: number, gap: number): void => {
 
 // Loose trees dropped into the space the chunks leave empty, so the slope reads as forest rather
 // than as a sequence of drawn shapes.
-const addStrays = (rng: Rng, trees: Tree[], lengthPx: number, gap: number): void => {
-  const end = slopeEndPx(lengthPx)
-  for (let y = RUN_IN_PX; y < end; y += STRAY_SPACING_PX) {
+const addStrays = (rng: Rng, trees: Tree[], from: number, end: number, gap: number): void => {
+  for (let y = from; y < end; y += STRAY_SPACING_PX) {
     const attempts = rngInt(rng, 1, 3)
     for (let i = 0; i < attempts; i += 1) {
       tryStray(rng, trees, Math.min(end, y + rngRange(rng, 0, STRAY_SPACING_PX)), gap)
@@ -154,22 +158,22 @@ const addStrays = (rng: Rng, trees: Tree[], lengthPx: number, gap: number): void
 // forest ends wherever the chunk loop happened to stop, which on some seeds is 5 % early.
 const TAIL_SPACING_PX: readonly [number, number] = [70, 140]
 
-const fillTail = (rng: Rng, trees: Tree[], lengthPx: number, gap: number): void => {
-  const end = slopeEndPx(lengthPx)
-  let y = trees.reduce((lowest, tree) => Math.max(lowest, tree.y), RUN_IN_PX)
+const fillTail = (rng: Rng, trees: Tree[], from: number, end: number, gap: number): void => {
+  let y = trees.reduce((lowest, tree) => Math.max(lowest, tree.y), from)
   while (y < end) {
     y = Math.min(end, y + rngRange(rng, ...TAIL_SPACING_PX))
     tryStray(rng, trees, y, gap)
   }
 }
 
-const buildTreeCourse = (level: Level, lengthPx: number): Tree[] => {
-  const rng = createRng(level.seed)
+// One stretch of forest, `from` to `end`. Built into its own array so the lane checks only ever
+// see the stretch being drawn — an endless run would otherwise rescan every tree it has passed.
+const fillTrees = (rng: Rng, level: Level, from: number, end: number): Tree[] => {
   const trees: Tree[] = []
-  let cursor = RUN_IN_PX
+  let cursor = from
   let previous: string | null = null
 
-  while (cursor < slopeEndPx(lengthPx)) {
+  while (cursor < end) {
     const chunk = pickChunk(rng, level.difficulty, previous)
     const { trees: chunkTrees, length } = chunk.build({
       rng,
@@ -177,7 +181,7 @@ const buildTreeCourse = (level: Level, lengthPx: number): Tree[] => {
       difficulty: level.difficulty,
     })
     for (const chunkTree of chunkTrees) {
-      if (chunkTree.y + cursor > slopeEndPx(lengthPx)) continue
+      if (chunkTree.y + cursor > end) continue
       trees.push(toTree(rng, chunkTree, cursor))
     }
     // A short gap between chunks so two patterns never read as one mess.
@@ -185,8 +189,8 @@ const buildTreeCourse = (level: Level, lengthPx: number): Tree[] => {
     previous = chunk.name
   }
 
-  addStrays(rng, trees, lengthPx, level.minGapPx)
-  fillTail(rng, trees, lengthPx, level.minGapPx)
+  addStrays(rng, trees, from, end, level.minGapPx)
+  fillTail(rng, trees, from, end, level.minGapPx)
   return trees.sort((a, b) => a.y - b.y)
 }
 
@@ -304,15 +308,14 @@ const buildCoinCourse = (level: Level, lengthPx: number): Collectible[] => {
 export const ROCKS_FROM_DIFFICULTY = 0.22
 const ROCK_SPACING = 1_400
 
-const buildRocks = (level: Level, lengthPx: number): Rock[] => {
+const fillRocks = (rng: Rng, level: Level, from: number, end: number): Rock[] => {
   if (level.difficulty < ROCKS_FROM_DIFFICULTY) return []
 
-  const rng = createRng(level.seed ^ 0x1c3b)
   const reach = clamp01((level.difficulty - ROCKS_FROM_DIFFICULTY) / (1 - ROCKS_FROM_DIFFICULTY))
   const spacing = lerp(ROCK_SPACING, ROCK_SPACING * 0.45, reach)
   const rocks: Rock[] = []
 
-  for (let y = RUN_IN_PX + spacing; y < slopeEndPx(lengthPx); y += spacing) {
+  for (let y = from + spacing; y < end; y += spacing) {
     const fromLeft = rng() < 0.5
     const radius = rngRange(rng, 20, 30)
     const spawnX = fromLeft ? radius : LOGICAL_WIDTH - radius
@@ -334,20 +337,51 @@ const buildRocks = (level: Level, lengthPx: number): Rock[] => {
   return rocks
 }
 
+// How much endless slope is drawn at a time, and how far ahead of the ball the next block lands.
+const ENDLESS_BLOCK_PX = 20_000
+const ENDLESS_LOOKAHEAD_PX = 6_000
+
 export const buildCourse = (level: Level): Course => {
-  const lengthPx = level.distanceM * PIXELS_PER_METRE
+  const lengthPx = level.endless ? ENDLESS_BLOCK_PX : level.distanceM * PIXELS_PER_METRE
   if (level.bonus) {
     const collectibles = buildCoinCourse(level, lengthPx)
     return { trees: [], collectibles, rocks: [], lengthPx, perfectScore: 0 }
   }
-  const trees = buildTreeCourse(level, lengthPx)
+  if (level.endless) {
+    const rng = createRng(level.seed)
+    return {
+      trees: fillTrees(rng, level, RUN_IN_PX, lengthPx),
+      collectibles: [],
+      rocks: fillRocks(createRng(level.seed ^ 0x1c3b), level, RUN_IN_PX, lengthPx),
+      lengthPx,
+      perfectScore: 0,
+    }
+  }
+  const trees = fillTrees(createRng(level.seed), level, RUN_IN_PX, slopeEndPx(lengthPx))
   return {
     trees,
     collectibles: [],
-    rocks: buildRocks(level, lengthPx),
+    rocks: fillRocks(createRng(level.seed ^ 0x1c3b), level, RUN_IN_PX, slopeEndPx(lengthPx)),
     lengthPx,
     perfectScore: Math.max(1, trees.length) * POINTS_PER_TREE,
   }
+}
+
+// Draws the next stretch of the endless level once the ball is close to the end of the drawn one.
+// `lengthPx` here means "how far the slope has been built", not where it stops — it never stops.
+export const extendCourse = (level: Level, course: Course, y: number): void => {
+  if (!level.endless || y + ENDLESS_LOOKAHEAD_PX < course.lengthPx) return
+  const from = course.lengthPx
+  const end = from + ENDLESS_BLOCK_PX
+  const rng = createRng(hashSeed(level.seed, from))
+  // A chunk can start a few pixels above the stretch it was built for; terrain.ts walks the array
+  // forward only, so the join has to stay sorted.
+  for (const tree of fillTrees(rng, level, from, end)) {
+    tree.y = Math.max(from, tree.y)
+    course.trees.push(tree)
+  }
+  for (const rock of fillRocks(rng, level, from, end)) course.rocks.push(rock)
+  course.lengthPx = end
 }
 
 // 1★ for finishing at all, the other two for grazing your way down rather than hiding from the trees.
