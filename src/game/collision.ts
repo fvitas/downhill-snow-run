@@ -4,8 +4,9 @@ import { TRUNK_HALF_SCALE, type GameState, type HitRecord, type Rock, type Tree 
 import { LOGICAL_WIDTH } from './viewport.ts'
 
 const SCAN_WINDOW = 120
-const COMBO_SECONDS = 1.4
+const COMBO_SECONDS = 1.6
 const COMBO_BASE = 2
+const COMBO_STEP = 2
 const COMBO_CAP = 32
 const COIN_RADIUS = 30
 const COIN_POINTS = 5
@@ -45,8 +46,9 @@ const ballXAt = (state: GameState, y: number): number => {
   return state.prevX + (state.x - state.prevX) * t
 }
 
+// Each near miss in a chain is worth two more than the last, not double.
 const comboPoints = (combo: number): number =>
-  Math.min(COMBO_CAP, COMBO_BASE * 2 ** Math.max(0, combo - 1))
+  Math.min(COMBO_CAP, COMBO_BASE + COMBO_STEP * Math.max(0, combo - 1))
 
 // Rocks move, so the ellipse trick used for trunks does not apply: plain circle against the step.
 const hitRock = (state: GameState, rock: Rock): boolean => {
