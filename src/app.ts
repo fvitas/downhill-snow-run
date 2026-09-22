@@ -27,6 +27,7 @@ import { loadTuning } from './game/storage.ts'
 import { updateTerrain } from './game/terrain.ts'
 import { createViewport } from './game/viewport.ts'
 import { themeForWorld } from './game/themes.ts'
+import { createConfetti } from './ui/confetti.ts'
 import { createHud, type Hud, type HudActions } from './ui/hud.ts'
 import { createInspector } from './ui/inspect.ts'
 import { createLevelMap } from './ui/map.ts'
@@ -76,6 +77,7 @@ export const createGame = (mount: GameMount): Game => {
 
   const { ctx } = createViewport(canvas, mount.host)
   const inspector = createInspector(state)
+  const confetti = createConfetti()
 
   const openMap = (): void => {
     state.screen = 'map'
@@ -91,6 +93,7 @@ export const createGame = (mount: GameMount): Game => {
     state.screen = 'run'
     map.hide()
     inspector.close()
+    confetti.reset()
     startLevel(state, index)
     const record = recordOf(progress, index)
     state.bestScore = record.score
@@ -111,7 +114,8 @@ export const createGame = (mount: GameMount): Game => {
 
   // Twelve sliders that can break the game — a playtest tool, never shipped.
   const panel = (mount.tuningPanel ?? import.meta.env.DEV) ? createTuningPanel(state) : null
-  stage.append(hud.root, map.root, ...(panel ? [panel.root] : []), inspector.root)
+  // Confetti sits over the finish card but under the map, which covers the whole stage.
+  stage.append(hud.root, confetti.root, map.root, ...(panel ? [panel.root] : []), inspector.root)
 
   attachInput(state, stage)
   void tryLockPortrait()
@@ -143,6 +147,7 @@ export const createGame = (mount: GameMount): Game => {
       if (state.coast <= 0) crossFinish()
     } else if (state.y >= finishY(state)) {
       state.coast = FINISH_COAST_SECONDS
+      confetti.celebrate()
     }
   }
 
