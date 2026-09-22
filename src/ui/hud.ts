@@ -319,7 +319,9 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
         liveText.textContent = `${Math.round(progress * 100)}%`
         liveBadge.style.background = theme.ink
         liveBadge.style.color = theme.snow
-        liveBadge.style.boxShadow = lift
+        // drop-shadow, not box-shadow: a box shadow follows the pill's rounded rect alone and its
+        // edge cuts across the caret's base, so the caret reads as a hat sat on top.
+        liveBadge.style.filter = `drop-shadow(${lift})`
         liveCaret.style.background = theme.ink
         liveBadge.style.left = `${headXAt(progress, badgeRow)}px`
       }
@@ -330,6 +332,9 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
       comboLine.textContent = state.combo > 1 ? `${praiseFor(state.combo)} ×${state.combo}` : ''
       comboLine.style.color = world.ink
+      // Nothing sits behind this line but slope, so a halo of the world's own snow lifts it off
+      // whatever trail or tree it lands on.
+      comboLine.style.textShadow = `0 0 10px ${world.snow}, 0 0 4px ${world.snow}`
 
       countdown.style.display = counting ? 'flex' : 'none'
       if (counting) {
