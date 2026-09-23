@@ -1,13 +1,17 @@
 {
-  "name": "ski-game-app",
+  "name": "treeline",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "sync": "pnpm build && cap sync",
+    "ios": "pnpm sync && cap open ios",
+    "android": "pnpm sync && cap open android"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/canvas-confetti": "^1.9.0",
     "@types/react": "^19.3.0",
@@ -19,5 +23,10 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2"
   }
 }
