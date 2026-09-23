@@ -90,8 +90,6 @@ export type GameState = {
   trail: TrailPoint[]
   particles: Particle[]
   sprayAccumulator: number
-  wallFlash: number
-  wallFlashSide: 1 | -1
 }
 
 export const cameraY = (state: GameState): number => cameraYFor(state.y, finishY(state))
@@ -170,8 +168,6 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     trail: [],
     particles: [],
     sprayAccumulator: 0,
-    wallFlash: 0,
-    wallFlashSide: 1,
   }
 }
 
@@ -231,7 +227,6 @@ export const resetRun = (state: GameState): void => {
   state.trail.length = 0
   state.particles.length = 0
   state.sprayAccumulator = 0
-  state.wallFlash = 0
 
   for (const tree of state.course.trees) tree.grazed = false
   for (const collectible of state.course.collectibles) collectible.taken = false

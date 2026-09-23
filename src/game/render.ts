@@ -442,13 +442,6 @@ const drawPops = (ctx: CanvasRenderingContext2D, state: GameState, camY: number)
   ctx.globalAlpha = 1
 }
 
-const drawWallFlash = (ctx: CanvasRenderingContext2D, state: GameState): void => {
-  if (state.wallFlash <= 0) return
-  const width = 16
-  ctx.fillStyle = `rgba(239, 68, 68, ${state.wallFlash * 0.55})`
-  ctx.fillRect(state.wallFlashSide === -1 ? 0 : LOGICAL_WIDTH - width, 0, width, viewHeight())
-}
-
 const drawBall = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
   const screenY = state.y - camY
   const r = state.tuning.ballRadius
@@ -472,12 +465,12 @@ const drawBall = (ctx: CanvasRenderingContext2D, state: GameState, camY: number)
 const DRIFT_RADIUS = 1.7
 const DRIFT_SINK = 1.6
 
-// The wreck goes into a drift at the trunk's root: a dome of plain slope snow over the ball, so
-// only its crown is left showing. Drawn in the background colour, so it reads as the ball sinking
-// in rather than as a shape laid on top of it.
+// The wreck goes into a drift at the trunk's root or against the wall: a dome of plain slope snow
+// over the ball, so only its crown is left showing. Drawn in the background colour, so it reads as
+// the ball sinking in rather than as a shape laid on top of it.
 const drawDrift = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
   const tree = state.hitTree
-  if (!tree) return
+  if (!tree && state.lastHit?.kind !== 'wall') return
   // The shake decays from 1 over a quarter second, which is exactly the drift's rise.
   const rise = 1 - state.shake
   if (rise <= 0) return
@@ -491,6 +484,7 @@ const drawDrift = (ctx: CanvasRenderingContext2D, state: GameState, camY: number
   ctx.arc(state.x, baseY, radius, Math.PI, Math.PI * 2)
   ctx.closePath()
   ctx.fill()
+  if (!tree) return
 
   // Opaque snow resets the patch it covers, erasing that patch's share of the trunk's shadow.
   // Clipping the shadow back inside the dome restores it without doubling it up anywhere else,
@@ -580,8 +574,6 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   drawPops(ctx, state, camY)
   if (state.inspect.on) drawHitboxes(ctx, state, camY)
   ctx.restore()
-
-  drawWallFlash(ctx, state)
 }
 
 export const stepEffects = (state: GameState, dt: number): void => {
@@ -595,5 +587,4 @@ export const stepEffects = (state: GameState, dt: number): void => {
 
   state.shake = Math.max(0, state.shake - dt * 4)
   state.freeze = Math.max(0, state.freeze - dt)
-  state.wallFlash = Math.max(0, state.wallFlash - dt * 2.5)
 }

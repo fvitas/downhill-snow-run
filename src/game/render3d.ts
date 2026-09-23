@@ -97,13 +97,6 @@ const drawParticles = (ctx: CanvasRenderingContext2D, state: GameState): void =>
   }
 }
 
-const drawWallFlash = (ctx: CanvasRenderingContext2D, state: GameState): void => {
-  if (state.wallFlash <= 0) return
-  const width = 16
-  ctx.fillStyle = `rgba(239, 68, 68, ${state.wallFlash * 0.55})`
-  ctx.fillRect(state.wallFlashSide === -1 ? 0 : LOGICAL_WIDTH - width, 0, width, viewHeight())
-}
-
 const drawBall = (ctx: CanvasRenderingContext2D, state: GameState): void => {
   const r = state.tuning.ballRadius
   const { x, y } = project(0, state.x)
@@ -133,5 +126,4 @@ export const render3d = (ctx: CanvasRenderingContext2D, state: GameState): void 
   drawParticles(ctx, state)
   drawTrees(ctx, state)
   drawBall(ctx, state)
-  drawWallFlash(ctx, state)
 }
