@@ -1,5 +1,17 @@
 export const LOGICAL_WIDTH = 540
+// The height the game is designed and balanced at. Everything that affects difficulty measures
+// against this, never against the device, so a taller phone shows more slope but plays the same.
 export const LOGICAL_HEIGHT = 960
+
+// What the canvas actually spans on this device, in logical px — always >= LOGICAL_HEIGHT, since
+// width fills the screen first. Only culling and full-bleed fills should read this.
+let visibleHeight = LOGICAL_HEIGHT
+export const viewHeight = (): number => visibleHeight
+
+// The HUD sits below the notch or island, so the ball drops by that much and a little more.
+// Only spare height pays for it — no device sees less slope ahead than the design height.
+let headroom = 0
+const HEADROOM_EXTRA_PX = 80
 
 // Ball rides just below the upper third, clear of the HUD; the slope ahead fills the screen below.
 export const BALL_SCREEN_Y = 0.36
@@ -23,7 +35,7 @@ export const finishDrop = (into: number): number => {
 }
 
 export const cameraYFor = (y: number, finish: number): number =>
-  Math.min(y - FOLLOW_PX - finishDrop(y - (finish - FINISH_EASE_PX)), finish - REST_PX)
+  Math.min(y - FOLLOW_PX - finishDrop(y - (finish - FINISH_EASE_PX)), finish - REST_PX) - headroom
 
 export type Viewport = {
   ctx: CanvasRenderingContext2D
@@ -36,16 +48,30 @@ export const createViewport = (canvas: HTMLCanvasElement, host?: HTMLElement): V
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2D canvas context unavailable')
 
+  // Same floor as the HUD header, so the ball moves exactly as far as the HUD did.
+  const safeTop = document.createElement('div')
+  safeTop.className =
+    'pointer-events-none invisible fixed top-0 h-[max(env(safe-area-inset-top),2.75rem)] w-px'
+  document.body.append(safeTop)
+
   const fit = () => {
     const availableWidth = host?.clientWidth ?? window.visualViewport?.width ?? window.innerWidth
     const availableHeight = host?.clientHeight ?? window.visualViewport?.height ?? window.innerHeight
+    // Width fills the screen — the walls are lethal, so they have to be the edges you can see.
+    // On a screen wider than 9:16 this falls back to the height scale, which gutters the sides
+    // rather than costing slope ahead.
     const scale = Math.min(availableWidth / LOGICAL_WIDTH, availableHeight / LOGICAL_HEIGHT)
     const dpr = Math.min(window.devicePixelRatio || 1, 3)
+    visibleHeight = availableHeight / scale
+    headroom = Math.min(
+      safeTop.offsetHeight / scale + HEADROOM_EXTRA_PX,
+      visibleHeight - LOGICAL_HEIGHT,
+    )
 
     canvas.width = Math.round(LOGICAL_WIDTH * dpr)
-    canvas.height = Math.round(LOGICAL_HEIGHT * dpr)
+    canvas.height = Math.round(visibleHeight * dpr)
     canvas.style.width = `${Math.round(LOGICAL_WIDTH * scale)}px`
-    canvas.style.height = `${Math.round(LOGICAL_HEIGHT * scale)}px`
+    canvas.style.height = `${Math.round(visibleHeight * scale)}px`
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   }
 

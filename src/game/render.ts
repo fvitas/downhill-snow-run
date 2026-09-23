@@ -8,7 +8,7 @@ import {
   type Tree,
 } from './state.ts'
 import { visibleRocks } from './rocks.ts'
-import { LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
+import { LOGICAL_WIDTH, viewHeight } from './viewport.ts'
 
 const drawTrail = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
   if (state.trail.length < 2) return
@@ -270,7 +270,7 @@ const drawCollectibles = (
   for (const item of state.course.collectibles) {
     if (item.taken) continue
     const screenY = item.y - camY
-    if (screenY < -30 || screenY > LOGICAL_HEIGHT + 30) continue
+    if (screenY < -30 || screenY > viewHeight() + 30) continue
 
     if (item.kind === 'coin') {
       ctx.fillStyle = COIN_FILL
@@ -393,7 +393,7 @@ const FINISH_ROWS = 2
 const drawFinish = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
   const band = FINISH_SQUARE * FINISH_ROWS
   const top = finishY(state) - camY - band / 2
-  if (top > LOGICAL_HEIGHT || top + band < 0) return
+  if (top > viewHeight() || top + band < 0) return
 
   ctx.fillStyle = FINISH_TAPE
   ctx.fillRect(0, top, LOGICAL_WIDTH, band)
@@ -417,7 +417,7 @@ const drawParticles = (
   for (const particle of state.particles) {
     if (particle.kind !== kind) continue
     const screenY = particle.y - camY
-    if (screenY < -20 || screenY > LOGICAL_HEIGHT + 20) continue
+    if (screenY < -20 || screenY > viewHeight() + 20) continue
     ctx.globalAlpha = (particle.life / particle.maxLife) * 0.9
     ctx.fillStyle = '#ffffff'
     ctx.beginPath()
@@ -434,7 +434,7 @@ const drawPops = (ctx: CanvasRenderingContext2D, state: GameState, camY: number)
   ctx.font = '700 26px system-ui, sans-serif'
   for (const pop of state.pops) {
     const screenY = pop.y - camY - (1 - pop.life) * POP_RISE
-    if (screenY < -40 || screenY > LOGICAL_HEIGHT + 40) continue
+    if (screenY < -40 || screenY > viewHeight() + 40) continue
     ctx.globalAlpha = Math.max(0, Math.min(1, pop.life * 1.4))
     ctx.fillStyle = state.theme.ball
     ctx.fillText(pop.text, pop.x, screenY)
@@ -446,7 +446,7 @@ const drawWallFlash = (ctx: CanvasRenderingContext2D, state: GameState): void =>
   if (state.wallFlash <= 0) return
   const width = 16
   ctx.fillStyle = `rgba(239, 68, 68, ${state.wallFlash * 0.55})`
-  ctx.fillRect(state.wallFlashSide === -1 ? 0 : LOGICAL_WIDTH - width, 0, width, LOGICAL_HEIGHT)
+  ctx.fillRect(state.wallFlashSide === -1 ? 0 : LOGICAL_WIDTH - width, 0, width, viewHeight())
 }
 
 const drawBall = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
@@ -534,7 +534,7 @@ const applyInspect = (ctx: CanvasRenderingContext2D, state: GameState, camY: num
   const { zoom, panX, panY } = state.inspect
   const focusX = state.lastHit?.ball.x ?? state.x
   const focusY = (state.lastHit?.ball.y ?? state.y) - camY
-  ctx.translate(LOGICAL_WIDTH / 2 + panX, LOGICAL_HEIGHT / 2 + panY)
+  ctx.translate(LOGICAL_WIDTH / 2 + panX, viewHeight() / 2 + panY)
   ctx.scale(zoom, zoom)
   ctx.translate(-focusX, -focusY)
 }
@@ -544,7 +544,7 @@ const SHAKE_PX = 14
 
 export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
   ctx.fillStyle = state.theme.snow
-  ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT)
+  ctx.fillRect(0, 0, LOGICAL_WIDTH, viewHeight())
 
   ctx.save()
   if (state.shake > 0 && !state.inspect.on) {

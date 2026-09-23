@@ -101,7 +101,10 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
   const header = document.createElement('div')
   header.className =
-    'absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.4rem)] flex flex-col items-center px-3'
+    // The status bar is hidden natively, so iOS reports a tiny top inset while the Dynamic Island
+    // is still physically there. The floor clears the island; the inset wins where it is larger.
+    'absolute inset-x-0 top-[calc(max(env(safe-area-inset-top),2.75rem)+0.4rem)] ' +
+    'flex flex-col items-center px-3'
 
   const barRow = document.createElement('div')
   barRow.className = 'relative flex w-[62%] items-center'

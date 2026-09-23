@@ -1,5 +1,5 @@
 import type { GameState } from './state.ts'
-import { LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
+import { LOGICAL_HEIGHT, LOGICAL_WIDTH, viewHeight } from './viewport.ts'
 
 const HORIZON_Y = LOGICAL_HEIGHT * 0.28
 const GROUND_Y = LOGICAL_HEIGHT * 0.86
@@ -101,7 +101,7 @@ const drawWallFlash = (ctx: CanvasRenderingContext2D, state: GameState): void =>
   if (state.wallFlash <= 0) return
   const width = 16
   ctx.fillStyle = `rgba(239, 68, 68, ${state.wallFlash * 0.55})`
-  ctx.fillRect(state.wallFlashSide === -1 ? 0 : LOGICAL_WIDTH - width, 0, width, LOGICAL_HEIGHT)
+  ctx.fillRect(state.wallFlashSide === -1 ? 0 : LOGICAL_WIDTH - width, 0, width, viewHeight())
 }
 
 const drawBall = (ctx: CanvasRenderingContext2D, state: GameState): void => {
@@ -126,7 +126,7 @@ export const render3d = (ctx: CanvasRenderingContext2D, state: GameState): void 
   ctx.fillStyle = SKY
   ctx.fillRect(0, 0, LOGICAL_WIDTH, HORIZON_Y)
   ctx.fillStyle = SNOW
-  ctx.fillRect(0, HORIZON_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT - HORIZON_Y)
+  ctx.fillRect(0, HORIZON_Y, LOGICAL_WIDTH, viewHeight() - HORIZON_Y)
 
   drawBands(ctx, state)
   drawTrail(ctx, state)

@@ -1,9 +1,10 @@
 import type { GameState } from './state.ts'
-import { LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
+import { LOGICAL_HEIGHT, LOGICAL_WIDTH, viewHeight } from './viewport.ts'
 import type { Rock } from './world.ts'
 
 // A rock starts rolling a screen and a half before the ball reaches it, so it is already moving
 // by the time it is on camera — a rock that starts on the spot reads as a spawn, not a hazard.
+// Measured against the design height, not the device: a tall phone must not get more warning.
 const WAKE_AHEAD_PX = LOGICAL_HEIGHT * 1.5
 
 export const resetRock = (rock: Rock): void => {
@@ -39,5 +40,5 @@ export const stepRocks = (state: GameState, dt: number): void => {
 
 export const visibleRocks = (state: GameState, camY: number): Rock[] =>
   state.course.rocks.filter(
-    (rock) => rock.rolling && rock.y - camY > -80 && rock.y - camY < LOGICAL_HEIGHT + 80,
+    (rock) => rock.rolling && rock.y - camY > -80 && rock.y - camY < viewHeight() + 80,
   )

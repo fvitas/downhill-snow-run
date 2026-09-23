@@ -101,7 +101,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
 
   const hud = div(
     'pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center gap-2.5 px-4 ' +
-      'pb-6 pt-[calc(env(safe-area-inset-top)+0.6rem)] text-white',
+      'pb-6 pt-[calc(max(env(safe-area-inset-top),2.75rem)+0.6rem)] text-white',
     {
       background:
         'linear-gradient(180deg, rgba(8, 32, 46, .78) 0%, rgba(8, 32, 46, .45) 52%, ' +

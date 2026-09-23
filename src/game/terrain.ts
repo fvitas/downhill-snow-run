@@ -1,5 +1,5 @@
 import type { GameState } from './state.ts'
-import { LOGICAL_HEIGHT } from './viewport.ts'
+import { viewHeight } from './viewport.ts'
 
 const ABOVE = 220
 const BELOW = 140
@@ -8,7 +8,7 @@ const BELOW = 140
 // Both cursors only ever move forward, which is safe because the camera only ever moves downhill.
 export const updateTerrain = (state: GameState, camY: number): void => {
   const top = camY - ABOVE
-  const bottom = camY + LOGICAL_HEIGHT + BELOW
+  const bottom = camY + viewHeight() + BELOW
   const { trees } = state
 
   while (state.treeFrom < trees.length && (trees[state.treeFrom]?.y ?? 0) < top) {
