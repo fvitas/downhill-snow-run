@@ -401,8 +401,10 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
   // coordinate here. Anything below SPLIT rides the repeating tile and is drawn once per repeat;
   // only a prop above it is a one-off.
   const makeProp = (slug: string, placement: PropPlacement, top: number, scale: number): HTMLElement => {
-    const element = div('absolute -translate-x-1/2 -translate-y-full', {
-      left: `${placement.x * scale}px`,
+    // Anchored with a translate, not `left`: an absolute box with no width shrinks to fit what is
+    // left of the layer, which squashed every sprite in the right column.
+    const element = div('absolute left-0', {
+      translate: `calc(${placement.x * scale}px - 50%) -100%`,
       top: `${top}px`,
       height: `${placement.h * scale}px`,
       zIndex: String(Math.round(placement.y)),
