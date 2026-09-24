@@ -13,7 +13,7 @@ import { LOGICAL_WIDTH } from './viewport.ts'
 export const LEVELS_PER_WORLD = 50
 export const WORLD_COUNT = 10
 export const LEVEL_COUNT = LEVELS_PER_WORLD * WORLD_COUNT
-// Every tenth level is the coin run: no trees, no death, pure reward.
+// Every tenth level is the coin run: no trees, only the walls to avoid, pure reward.
 export const BONUS_EVERY = 10
 // Halfway between two coin runs the wall comes down the mountain after you.
 export const AVALANCHE_EVERY = 5
@@ -207,15 +207,49 @@ const CENTRE_X = LOGICAL_WIDTH / 2
 const clampCoinX = (x: number): number =>
   Math.min(LOGICAL_WIDTH - COIN_EDGE, Math.max(COIN_EDGE, x))
 
-const putCoin = (out: Collectible[], x: number, y: number): void => {
-  out.push({ x: clampCoinX(x), y, kind: 'coin', taken: false })
+// Every placement is nudged off its ideal spot so the shapes read as scattered, not drawn.
+const COIN_JITTER_X = 14
+const COIN_JITTER_Y = 10
+
+const putCoin = (rng: Rng, out: Collectible[], x: number, y: number): void => {
+  out.push({
+    x: clampCoinX(x + rngRange(rng, -COIN_JITTER_X, COIN_JITTER_X)),
+    y: y + rngRange(rng, -COIN_JITTER_Y, COIN_JITTER_Y),
+    kind: 'coin',
+    taken: false,
+  })
 }
 
-const putDiamond = (out: Collectible[], x: number, y: number): void => {
-  out.push({ x: clampCoinX(x), y, kind: 'diamond', taken: false })
+const putDiamond = (rng: Rng, out: Collectible[], x: number, y: number): void => {
+  out.push({
+    x: clampCoinX(x + rngRange(rng, -COIN_JITTER_X, COIN_JITTER_X)),
+    y: y + rngRange(rng, -COIN_JITTER_Y, COIN_JITTER_Y),
+    kind: 'diamond',
+    taken: false,
+  })
 }
 
 type CoinSegment = (rng: Rng, out: Collectible[], top: number, length: number) => void
+
+// A wandering lane: each row drifts a random amount, sometimes skips, sometimes doubles up.
+// The drift per row stays under what the ball can carve, so everything is still reachable.
+const coinScatter: CoinSegment = (rng, out, top, length) => {
+  let x = rngRange(rng, COIN_EDGE + 40, LOGICAL_WIDTH - COIN_EDGE - 40)
+  let drift = 0
+  for (let y = top; y < top + length; y += rngRange(rng, 40, 90)) {
+    drift = drift * 0.5 + rngRange(rng, -75, 75)
+    x = clampCoinX(x + drift)
+    if (x <= COIN_EDGE || x >= LOGICAL_WIDTH - COIN_EDGE) drift = -drift
+    const roll = rng()
+    if (roll < 0.15) continue
+    if (roll < 0.25) {
+      putDiamond(rng, out, x + rngRange(rng, -120, 120), y)
+      continue
+    }
+    putCoin(rng, out, x, y)
+    if (roll > 0.8) putCoin(rng, out, x + rngRange(rng, -60, 60), y + rngRange(rng, 10, 30))
+  }
+}
 
 // A sweeping line you ride, with the odd diamond parked across the slope from its peak.
 const coinWave: CoinSegment = (rng, out, top, length) => {
@@ -225,31 +259,10 @@ const coinWave: CoinSegment = (rng, out, top, length) => {
   const spacing = rngRange(rng, 46, 70)
   for (let y = top; y < top + length; y += spacing) {
     const wave = Math.sin(phase + y / period)
-    putCoin(out, CENTRE_X + wave * amplitude, y)
+    putCoin(rng, out, CENTRE_X + wave * amplitude, y)
     if (Math.abs(wave) > 0.95 && rng() < 0.6) {
-      putDiamond(out, CENTRE_X - Math.sign(wave) * (CENTRE_X - COIN_EDGE), y)
+      putDiamond(rng, out, CENTRE_X - Math.sign(wave) * (CENTRE_X - COIN_EDGE), y)
     }
-  }
-}
-
-// Straight legs across the slope: you commit to a line, then flip at the corner.
-const coinZigzag: CoinSegment = (rng, out, top, length) => {
-  const spacing = rngRange(rng, 44, 62)
-  const legLength = rngRange(rng, 200, 340)
-  const inset = rngRange(rng, COIN_EDGE, 150)
-  let side = rng() < 0.5 ? -1 : 1
-  let y = top
-  while (y < top + length) {
-    const from = CENTRE_X - side * (CENTRE_X - inset)
-    const to = CENTRE_X + side * (CENTRE_X - inset)
-    const legEnd = Math.min(y + legLength, top + length)
-    for (let cursor = y; cursor < legEnd; cursor += spacing) {
-      putCoin(out, from + (to - from) * ((cursor - y) / legLength), cursor)
-    }
-    // The corner overshoots into a diamond: worth one extra flick if you are greedy.
-    if (rng() < 0.45) putDiamond(out, to + side * 40, legEnd)
-    side *= -1
-    y = legEnd
   }
 }
 
@@ -259,39 +272,24 @@ const coinCluster: CoinSegment = (rng, out, top, length) => {
   for (let i = 0; i < pockets; i += 1) {
     const centreX = rngRange(rng, COIN_EDGE + 40, LOGICAL_WIDTH - COIN_EDGE - 40)
     const centreY = top + (length * (i + 0.5)) / pockets + rngRange(rng, -60, 60)
-    const radius = rngRange(rng, 52, 84)
     const count = rngInt(rng, 7, 11)
-    const spin = rngRange(rng, 0, Math.PI * 2)
     for (let k = 0; k < count; k += 1) {
-      const angle = spin + (k / count) * Math.PI * 2
-      putCoin(out, centreX + Math.cos(angle) * radius, centreY + Math.sin(angle) * radius * 1.3)
+      const angle = rngRange(rng, 0, Math.PI * 2)
+      const radius = rngRange(rng, 36, 96)
+      putCoin(rng, out, centreX + Math.cos(angle) * radius, centreY + Math.sin(angle) * radius * 1.4)
     }
-    putDiamond(out, centreX, centreY)
+    putDiamond(rng, out, centreX, centreY)
   }
 }
 
-// A rest: coins hugging one wall, diamonds strung along the other one.
-const coinLane: CoinSegment = (rng, out, top, length) => {
-  const side = rng() < 0.5 ? -1 : 1
-  const lane = CENTRE_X + side * rngRange(rng, 90, CENTRE_X - COIN_EDGE)
-  const spacing = rngRange(rng, 44, 58)
-  const drift = rngRange(rng, -50, 50)
-  for (let y = top; y < top + length; y += spacing) {
-    putCoin(out, lane + (drift * (y - top)) / length, y)
-  }
-  const diamonds = rngInt(rng, 1, 3)
-  for (let i = 0; i < diamonds; i += 1) {
-    putDiamond(out, CENTRE_X - side * (CENTRE_X - COIN_EDGE), top + (length * (i + 0.5)) / diamonds)
-  }
-}
-
+// Scatter carries most of a run; the drawn shapes only turn up now and then as a change of pace.
 const COIN_SEGMENTS: readonly CoinSegment[] = [
+  coinScatter,
+  coinScatter,
+  coinScatter,
+  coinScatter,
   coinWave,
-  coinWave,
-  coinZigzag,
-  coinZigzag,
   coinCluster,
-  coinLane,
 ]
 
 // Bonus runs are stitched from segments, so no two coin levels read as the same wave.
