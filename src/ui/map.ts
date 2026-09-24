@@ -552,7 +552,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
 
   const boot = async (): Promise<void> => {
     const [plates, ...placed] = await Promise.all([
-      bakePlate('/map/plate.png'),
+      bakePlate('/map/plate.webp'),
       ...PROP_SLUGS.map(loadProps),
     ])
     head = plates.head
