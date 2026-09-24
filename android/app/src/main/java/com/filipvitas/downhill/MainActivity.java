@@ -1,4 +1,4 @@
-package com.filipvitas.treeline;
+package com.filipvitas.downhill;
 
 import com.getcapacitor.BridgeActivity;
 

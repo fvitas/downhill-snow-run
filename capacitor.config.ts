@@ -3,8 +3,8 @@ import type { CapacitorConfig } from '@capacitor/cli'
 // The CLI reads this file's default export by contract, so it is the one place the project
 // can't use a named export.
 const config: CapacitorConfig = {
-  appId: 'com.filipvitas.treeline',
-  appName: 'Treeline',
+  appId: 'com.filipvitas.downhill',
+  appName: 'Downhill',
   webDir: 'dist',
   // Matches the letterbox behind the canvas, so the launch handoff doesn't flash white.
   backgroundColor: '#0f172a',

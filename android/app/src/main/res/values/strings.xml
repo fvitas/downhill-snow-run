@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Treeline</string>
-    <string name="title_activity_main">Treeline</string>
-    <string name="package_name">com.filipvitas.treeline</string>
-    <string name="custom_url_scheme">com.filipvitas.treeline</string>
+    <string name="app_name">Downhill</string>
+    <string name="title_activity_main">Downhill</string>
+    <string name="package_name">com.filipvitas.downhill</string>
+    <string name="custom_url_scheme">com.filipvitas.downhill</string>
 </resources>
