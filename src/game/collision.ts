@@ -118,8 +118,7 @@ export const checkCollisions = (state: GameState): void => {
   }
 
   const r = state.tuning.ballRadius
-  // Bonus runs cannot be lost: the walls just hold you in.
-  if (!state.level.bonus && (state.x <= r || state.x >= LOGICAL_WIDTH - r)) {
+  if (state.x <= r || state.x >= LOGICAL_WIDTH - r) {
     kill(state, 'wall', null)
     return
   }
