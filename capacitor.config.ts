@@ -16,6 +16,14 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: '#0f172a',
   },
+  plugins: {
+    // iOS hides the status bar (Info.plist), so Android hides both bars to match. Old WebViews
+    // (< 140) can't read env(safe-area-inset-*), and hidden bars leave only the cutout to inset.
+    SystemBars: {
+      hidden: true,
+      initialViewportFitValueHint: 'cover',
+    },
+  },
 }
 
 export default config

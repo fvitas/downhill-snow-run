@@ -8,7 +8,8 @@
     "preview": "vite preview --host",
     "sync": "pnpm build && cap sync",
     "ios": "pnpm sync && cap open ios",
-    "android": "pnpm sync && cap open android"
+    "android": "pnpm sync && cap open android",
+    "android:apk": "pnpm sync && cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew assembleDebug -q"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",
