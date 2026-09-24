@@ -360,7 +360,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     if (stars > 0 && !level.endless) {
       const row = div(
         'absolute left-0 top-[30px] flex -translate-x-1/2 gap-0.5 text-[0.7rem] ' +
-          'drop-shadow-[0_1px_2px_rgba(13,43,62,0.35)]',
+          'drop-shadow-[0_1px_1px_#aaa]',
       )
       for (let s = 0; s < 3; s += 1) {
         const star = document.createElement('span')
