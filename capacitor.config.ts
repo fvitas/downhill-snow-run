@@ -4,7 +4,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 // can't use a named export.
 const config: CapacitorConfig = {
   appId: 'com.filipvitas.downhill',
-  appName: 'Downhill',
+  appName: 'Downhill: Snow Run',
   webDir: 'dist',
   // Matches the letterbox behind the canvas, so the launch handoff doesn't flash white.
   backgroundColor: '#0f172a',
