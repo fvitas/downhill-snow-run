@@ -1,3 +1,4 @@
+import { createElement, LockKeyhole } from 'lucide'
 import { LEVEL_COUNT, LEVELS_PER_WORLD, levelAt, type Level } from '../game/levels.ts'
 import { recordOf, totalStars, type Progress } from '../game/progress.ts'
 import { NIGHT_WORLD, PROP_SLUGS, WORLDS, worldName } from '../game/worlds.ts'
@@ -282,7 +283,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
   const paintNode = (node: HTMLElement, state: 'done' | 'now' | 'lock', level: Level): void => {
     if (state === 'lock') {
       node.style.background = 'rgba(255, 255, 255, .58)'
-      node.style.color = 'rgba(13, 43, 62, .5)'
+      node.style.color = '#5e7f9a'
       node.style.borderColor = 'rgba(255, 255, 255, .9)'
       node.style.fontSize = '1.05rem'
       node.style.boxShadow = '0 4px 10px rgba(13, 43, 62, .2)'
@@ -340,12 +341,13 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     node.type = 'button'
     node.dataset.ui = ''
     node.className = `${NODE_BASE} pointer-events-auto`
-    node.textContent = locked ? '🔒' : String(index)
+    if (locked) node.append(createElement(LockKeyhole, { width: 22, height: 22, 'stroke-width': 2.5 }))
+    else node.textContent = String(index)
     paintNode(node, state, level)
     if (level.bonus && !locked) {
       const gift = div(
         'absolute -right-[5px] -top-[5px] grid h-6 w-6 place-items-center rounded-full ' +
-          'bg-white text-xs shadow-[0_3px_8px_rgba(13,43,62,0.3)]',
+          'bg-white text-sm shadow-[0_3px_8px_rgba(13,43,62,0.3)]',
       )
       gift.textContent = '🎁'
       node.append(gift)

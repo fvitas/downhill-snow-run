@@ -1,2 +1,6 @@
 minimumReleaseAge: 10080
+# Type-only package; pnpm re-resolves it as a vite peer on every add and it ships weekly.
+minimumReleaseAgeExclude:
+  - '@types/node'
 trustPolicy: no-downgrade
+savePrefix: ""
