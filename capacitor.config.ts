@@ -7,14 +7,14 @@ const config: CapacitorConfig = {
   appName: 'Downhill: Snow Run',
   webDir: 'dist',
   // Matches the letterbox behind the canvas, so the launch handoff doesn't flash white.
-  backgroundColor: '#0f172a',
+  backgroundColor: '#0a4478',
   ios: {
     // The slope is drawn edge to edge under the HUD; bouncing the web view would drag it.
     scrollEnabled: false,
     contentInset: 'never',
   },
   android: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0a4478',
   },
   plugins: {
     // iOS hides the status bar (Info.plist), so Android hides both bars to match. Old WebViews

@@ -14,7 +14,7 @@
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
         <!-- Matches capacitor.config backgroundColor: any inset the WebView is padded by shows this. -->
-        <item name="android:windowBackground">#0f172a</item>
+        <item name="android:windowBackground">#0a4478</item>
         <item name="android:windowFullscreen">true</item>
         <!-- The slope runs edge to edge; the HUD keeps clear of the notch via safe-area insets. -->
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
