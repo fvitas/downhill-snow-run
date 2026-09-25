@@ -1,4 +1,4 @@
-import { nextStarTarget, starsFor } from '../game/levels.ts'
+import { rateRun } from '../game/levels.ts'
 import {
   COUNTDOWN_TICK_SECONDS,
   levelProgress,
@@ -60,15 +60,6 @@ const praiseFor = (combo: number): string => {
     rung += 1
   }
   return PRAISE[rung] ?? ''
-}
-
-const star = (filled: boolean): HTMLElement => {
-  const element = document.createElement('span')
-  element.textContent = '★'
-  element.className = filled
-    ? 'text-amber-400 drop-shadow-[0_2px_6px_rgba(245,166,35,0.5)]'
-    : 'opacity-25'
-  return element
 }
 
 const button = (label: string, classes: string, onClick: () => void): HTMLButtonElement => {
@@ -163,12 +154,8 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   // two can never collide, and it goes quiet once this run is past it.
   const bestBadge = pill('bottom-1.5')
   const bestCaret = caret(false)
-  const crown = document.createElement('span')
-  crown.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-2.5 w-2.5">' +
-    '<path d="M4 18h16l1.2-9.6-5.2 3.4L12 4 8 11.8 2.8 8.4z" /></svg>'
   const bestText = document.createElement('span')
-  bestBadge.append(crown, bestText, bestCaret)
+  bestBadge.append(bestText, bestCaret)
 
   const liveText = document.createElement('span')
   liveBadge.append(liveText, liveCaret)
@@ -209,8 +196,18 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   const title = document.createElement('div')
   title.className = 'text-xl font-bold tracking-[0.3em] opacity-70'
 
-  const stars = document.createElement('div')
-  stars.className = 'mt-1 flex gap-2 text-4xl'
+  const verdict = document.createElement('div')
+  verdict.className = 'mt-1 flex items-center gap-2'
+
+  const rating = document.createElement('span')
+  rating.className = 'text-lg font-bold'
+
+  const newBest = document.createElement('span')
+  newBest.className =
+    'rounded-full bg-amber-400 px-2 py-0.5 text-[0.65rem] font-extrabold uppercase ' +
+    'tracking-[0.12em] text-slate-900'
+  newBest.textContent = 'New best'
+  verdict.append(rating, newBest)
 
   const finalScore = document.createElement('div')
   finalScore.className = 'text-6xl font-bold tabular-nums tracking-tight'
@@ -242,7 +239,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
     actions.onMenu,
   )
   buttons.append(primary, crashSite, menu)
-  sheet.append(title, stars, finalScore, detail, buttons)
+  sheet.append(title, verdict, finalScore, detail, buttons)
   card.append(sheet)
 
   const countdown = document.createElement('div')
@@ -286,7 +283,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
         fromNode.textContent = String(level.index)
         applySolid(fromNode, theme.ink, theme.snow)
-        toNode.textContent = level.bonus ? '★' : String(level.index + 1)
+        toNode.textContent = level.bonus ? '🎁' : String(level.index + 1)
         toNode.style.background = theme.snow
         toNode.style.borderColor = theme.ink
         toNode.style.color = theme.ink
@@ -396,20 +393,16 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       crashSite.style.display = inspectable ? 'block' : 'none'
       menu.style.color = theme.ink
 
-      stars.replaceChildren()
-      const earned = state.finished ? starsFor(state.score, state.course.perfectScore) : 0
-      for (let i = 0; i < 3; i += 1) stars.append(star(i < earned))
+      const grade = state.finished ? rateRun(level, state.score, state.course.perfectScore) : null
+      verdict.style.display = grade ? 'flex' : 'none'
+      rating.textContent = grade ?? ''
+      newBest.style.display = state.newBest ? 'inline-block' : 'none'
 
-      const target = nextStarTarget(state.score, state.course.perfectScore)
-      if (state.finished) {
-        detail.textContent = level.bonus
-          ? `${state.runCoins} coins · ${state.runDiamonds} diamonds`
-          : target === null
-            ? 'Perfect run'
-            : `${target - state.score} more for the next star`
-      } else {
-        detail.textContent = `Best: ${Math.max(state.bestScore, state.score)}`
-      }
+      // A crash banks nothing, so the best on show is the one already saved.
+      const best = state.finished ? Math.max(state.bestScore, state.score) : state.bestScore
+      detail.textContent = level.bonus && state.finished
+        ? `${state.runCoins} coins · ${state.runDiamonds} diamonds`
+        : `Best: ${best}`
     },
   }
 }

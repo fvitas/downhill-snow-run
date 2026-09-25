@@ -2,14 +2,13 @@ import { avalancheCaught, pushAvalanche } from './avalanche.ts'
 import { burst } from './particles.ts'
 import { TRUNK_HALF_SCALE, type GameState, type HitRecord, type Rock, type Tree } from './state.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
+import { COIN_POINTS, DIAMOND_POINTS } from './world.ts'
 
 const SCAN_WINDOW = 120
 const COMBO_BASE = 2
 const COMBO_STEP = 2
 const COMBO_CAP = 32
 const COIN_RADIUS = 30
-const COIN_POINTS = 5
-const DIAMOND_POINTS = 50
 // How long the wreck is left on screen — shake, thrown snow and all — before the card covers it.
 const FREEZE_SECONDS = 1.1
 // Shake strength at the moment of impact; stepEffects bleeds it off over a quarter second.
@@ -101,7 +100,7 @@ const collect = (state: GameState): void => {
     state.pops.push({
       x: item.x,
       y: item.y - 20,
-      text: diamond ? '+50' : `+${COIN_POINTS}`,
+      text: `+${diamond ? DIAMOND_POINTS : COIN_POINTS}`,
       life: 1,
     })
   }

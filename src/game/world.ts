@@ -11,6 +11,9 @@ export type Tree = {
   grazed: boolean
 }
 
+export const COIN_POINTS = 5
+export const DIAMOND_POINTS = 50
+
 export type Collectible = {
   x: number
   y: number

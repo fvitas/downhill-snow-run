@@ -1,6 +1,6 @@
 import { createElement, LockKeyhole } from 'lucide'
 import { LEVEL_COUNT, LEVELS_PER_WORLD, levelAt, type Level } from '../game/levels.ts'
-import { recordOf, totalStars, type Progress } from '../game/progress.ts'
+import { recordOf, totalScore, type Progress } from '../game/progress.ts'
 import { NIGHT_WORLD, PROP_SLUGS, WORLDS, worldName } from '../game/worlds.ts'
 import { bakePlate, PLATE_H, PLATE_W, rowAt, SPLIT, type Plate } from './plate.ts'
 
@@ -53,7 +53,7 @@ const loadProps = async (slug: string): Promise<PropPlacement[]> => {
 }
 
 export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
-  const root = div('absolute inset-0 z-20 flex flex-col overflow-hidden bg-[#cfe9f6]')
+  const root = div('absolute inset-0 z-20 flex flex-col overflow-hidden bg-[#0a4478]')
   root.style.display = 'none'
 
   const stage = div('relative grow overflow-hidden')
@@ -65,7 +65,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
   scroller.dataset.ui = ''
 
   // `isolate` boxes the night band's multiply blend in, so it can never reach the chrome above it.
-  const track = div('relative isolate w-full bg-[#d2ebf7]')
+  const track = div('relative isolate w-full bg-[#dbeaf4]')
 
   const artHead = div('pointer-events-none absolute inset-x-0 bg-[0_0] bg-no-repeat')
   const artBody = div('pointer-events-none absolute inset-x-0 bg-[0_0] bg-repeat-y')
@@ -115,12 +115,16 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
   const hudSub = div('text-[0.7rem] font-semibold tracking-[0.04em] opacity-70')
   who.append(hudWorld, hudSub)
 
-  const starTotal = div(
-    'flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.16] px-3 py-1.5 ' +
-      'text-[0.8rem] font-extrabold backdrop-blur-md',
+  const total = div(
+    'flex shrink-0 items-baseline gap-1.5 rounded-full bg-white/[0.16] px-3 py-1.5 ' +
+      'font-extrabold backdrop-blur-md',
   )
+  const totalValue = div('text-[0.8rem] tabular-nums')
+  const totalLabel = div('text-[0.6rem] uppercase tracking-[0.08em] opacity-70')
+  totalLabel.textContent = 'total'
+  total.append(totalValue, totalLabel)
 
-  hud.append(who, starTotal)
+  hud.append(who, total)
 
   // Once the current level scrolls out of view, a pill at the bottom says where it went.
   const jump = document.createElement('button')
@@ -138,7 +142,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     '<circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="3" /></svg>Next run'
 
   const booting = div(
-    'absolute inset-0 z-20 grid place-items-center bg-[#0e3444] text-[0.8rem] font-bold ' +
+    'absolute inset-0 z-20 grid place-items-center bg-[#0a4478] text-[0.8rem] font-bold ' +
       'tracking-[0.1em] text-[#cfe9f6] transition-opacity duration-300',
   )
   booting.textContent = 'BAKING TILES…'
@@ -355,20 +359,16 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     if (!locked) node.addEventListener('click', () => onPlay(index))
     slot.append(node)
 
-    const stars = progress ? recordOf(progress, index).stars : 0
-    // The endless level is never cleared, so it never wears a rating.
-    if (stars > 0 && !level.endless) {
-      const row = div(
-        'absolute left-0 top-[30px] flex -translate-x-1/2 gap-0.5 text-[0.7rem] ' +
-          'drop-shadow-[0_1px_1px_#aaa]',
+    const best = progress ? recordOf(progress, index).score : 0
+    // The endless level is never cleared, so it never wears a score.
+    if (best > 0 && !level.endless) {
+      const score = div(
+        'absolute left-0 top-[31px] -translate-x-1/2 rounded-full bg-white px-1.5 py-px ' +
+          'text-[0.65rem] font-extrabold tabular-nums text-[#2b5876] ' +
+          'shadow-[0_2px_5px_rgba(13,43,62,0.3)]',
       )
-      for (let s = 0; s < 3; s += 1) {
-        const star = document.createElement('span')
-        star.textContent = '★'
-        star.style.color = s < stars ? '#ffc247' : 'rgba(255, 255, 255, .75)'
-        row.append(star)
-      }
-      slot.append(row)
+      score.textContent = String(best)
+      slot.append(score)
     }
 
     return slot
@@ -483,7 +483,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     hudWorld.textContent = worldName(world)
     const first = (world - 1) * LEVELS_PER_WORLD + 1
     hudSub.textContent = `levels ${first} – ${first + LEVELS_PER_WORLD - 1}`
-    starTotal.textContent = `★ ${progress ? totalStars(progress) : 0}`
+    totalValue.textContent = String(progress ? totalScore(progress) : 0)
   }
 
   const syncJump = (): void => {

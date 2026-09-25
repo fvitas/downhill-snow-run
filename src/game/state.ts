@@ -67,6 +67,8 @@ export type GameState = {
   // Points already paid out for ground covered, so a frame only ever pays the new metres.
   distanceScore: number
   bestScore: number
+  // Set when the run just finished beat a best that was already on the books.
+  newBest: boolean
   // The furthest a failed attempt on this level got, 0–1. Zero means there is no ghost to draw.
   bestReach: number
   // A chain of near misses, only broken by a crash.
@@ -150,6 +152,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     score: 0,
     distanceScore: 0,
     bestScore: 0,
+    newBest: false,
     bestReach: 0,
     combo: 0,
     runCoins: 0,
@@ -209,6 +212,7 @@ export const resetRun = (state: GameState): void => {
   state.coast = 0
   state.score = 0
   state.distanceScore = 0
+  state.newBest = false
   state.combo = 0
   state.runCoins = 0
   state.runDiamonds = 0

@@ -1,6 +1,8 @@
 import { pickChunk, TREE_MARGIN, type ChunkTree } from './chunks.ts'
 import { createRng, hashSeed, rngInt, rngPick, rngRange, type Rng } from './rng.ts'
 import {
+  COIN_POINTS,
+  DIAMOND_POINTS,
   METRES_PER_POINT,
   PIXELS_PER_METRE,
   type Collectible,
@@ -13,11 +15,10 @@ import { LOGICAL_WIDTH } from './viewport.ts'
 export const LEVELS_PER_WORLD = 50
 export const WORLD_COUNT = 10
 export const LEVEL_COUNT = LEVELS_PER_WORLD * WORLD_COUNT
-// Every tenth level is the coin run: no trees, only the walls to avoid, pure reward.
-export const BONUS_EVERY = 10
-// Halfway between two coin runs the wall comes down the mountain after you.
-export const AVALANCHE_EVERY = 5
-export const AVALANCHE_FROM_LEVEL = 15
+// Each world ends on a finale: odd worlds on the coin run — no trees, only the walls to avoid —
+// even worlds with the wall coming down the mountain after you.
+export const BONUS_EVERY = 50
+export const AVALANCHE_EVERY = 100
 
 export type Level = {
   index: number
@@ -63,7 +64,8 @@ export const levelAt = (rawIndex: number): Level => {
   const indexInWorld = index - (world - 1) * LEVELS_PER_WORLD
   const difficulty = difficultyOf(world, indexInWorld)
   const endless = index === LEVEL_COUNT
-  const bonus = !endless && index % BONUS_EVERY === 0
+  const avalanche = !endless && index % AVALANCHE_EVERY === 0
+  const bonus = !endless && !avalanche && index % BONUS_EVERY === 0
 
   return {
     index,
@@ -71,7 +73,7 @@ export const levelAt = (rawIndex: number): Level => {
     indexInWorld,
     theme: themeForWorld(world),
     bonus,
-    avalanche: !bonus && !endless && index >= AVALANCHE_FROM_LEVEL && index % AVALANCHE_EVERY === 0,
+    avalanche,
     endless,
     seed: hashSeed(index, SEED_SALT),
     difficulty,
@@ -88,13 +90,13 @@ export type Course = {
   collectibles: Collectible[]
   rocks: Rock[]
   lengthPx: number
-  // What a run that grazed everything and skied the whole level would score — the 2★/3★ bars
-  // are cut from it.
+  // What a run that grazed everything and skied the whole level would score — the ratings are
+  // cut from it. Zero on the endless level, which nobody finishes.
   perfectScore: number
 }
 
-// Courses are small enough (a few hundred trees) to build whole, which beats streaming: the star
-// thresholds need to know what the whole level contains before the run starts.
+// Courses are small enough (a few hundred trees) to build whole, which beats streaming: the rating
+// cuts need to know what the whole level contains before the run starts.
 const RUN_IN_PX = 520
 // The slope runs to 95 % and then empties, so the trees thin out only on the very last approach.
 const SLOPE_END_FRACTION = 0.95
@@ -350,7 +352,12 @@ export const buildCourse = (level: Level): Course => {
   const lengthPx = level.endless ? ENDLESS_BLOCK_PX : level.distanceM * PIXELS_PER_METRE
   if (level.bonus) {
     const collectibles = buildCoinCourse(level, lengthPx)
-    return { trees: [], collectibles, rocks: [], lengthPx, perfectScore: 0 }
+    const pickups = collectibles.reduce(
+      (sum, item) => sum + (item.kind === 'diamond' ? DIAMOND_POINTS : COIN_POINTS),
+      0,
+    )
+    const perfectScore = pickups + Math.round(level.distanceM / METRES_PER_POINT)
+    return { trees: [], collectibles, rocks: [], lengthPx, perfectScore }
   }
   if (level.endless) {
     const rng = createRng(level.seed)
@@ -391,20 +398,17 @@ export const extendCourse = (level: Level, course: Course, y: number): void => {
   course.lengthPx = end
 }
 
-// 1★ for finishing at all, the other two for grazing your way down rather than hiding from the trees.
-const TWO_STARS = 0.25
-const THREE_STARS = 0.55
+export const RATINGS = ['Made it', 'Good run', 'Great run', 'Perfect line'] as const
+export type Rating = (typeof RATINGS)[number]
 
-export const starsFor = (score: number, perfectScore: number): number => {
-  if (perfectScore <= 0) return 3
-  if (score >= perfectScore * THREE_STARS) return 3
-  if (score >= perfectScore * TWO_STARS) return 2
-  return 1
-}
+// Fractions of the perfect score for the second, third and top rating. The coin run's cuts sit
+// lower: a few missed coins should not cost the top rating.
+const RUN_CUTS = [0.25, 0.55, 0.8]
+const BONUS_CUTS = [0.2, 0.45, 0.7]
 
-export const nextStarTarget = (score: number, perfectScore: number): number | null => {
+export const rateRun = (level: Level, score: number, perfectScore: number): Rating | null => {
   if (perfectScore <= 0) return null
-  if (score < perfectScore * TWO_STARS) return Math.round(perfectScore * TWO_STARS)
-  if (score < perfectScore * THREE_STARS) return Math.round(perfectScore * THREE_STARS)
-  return null
+  const cuts = level.bonus ? BONUS_CUTS : RUN_CUTS
+  const tier = cuts.filter((cut) => score >= perfectScore * cut).length
+  return RATINGS[tier] ?? null
 }

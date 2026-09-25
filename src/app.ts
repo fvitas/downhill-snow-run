@@ -5,8 +5,15 @@ import { attachInput } from './game/input.ts'
 import { attachPause, tryLockPortrait } from './game/pause.ts'
 import { emitSpray, stepParticles } from './game/particles.ts'
 import { stepPhysics } from './game/physics.ts'
-import { clampLevelIndex, extendCourse, starsFor } from './game/levels.ts'
-import { loadProgress, recordOf, recordReach, recordRun, saveProgress } from './game/progress.ts'
+import { clampLevelIndex, extendCourse } from './game/levels.ts'
+import {
+  clearedBefore,
+  loadProgress,
+  recordOf,
+  recordReach,
+  recordRun,
+  saveProgress,
+} from './game/progress.ts'
 import { render, stepEffects } from './game/render.ts'
 import { stepRocks } from './game/rocks.ts'
 import { render3d } from './game/render3d.ts'
@@ -131,8 +138,9 @@ export const createGame = (mount: GameMount): Game => {
   const crossFinish = (): void => {
     state.finished = true
     state.pressed = false
-    const stars = starsFor(state.score, state.course.perfectScore)
-    progress = recordRun(progress, state.level.index, stars, state.score)
+    const { index } = state.level
+    state.newBest = clearedBefore(progress, index) && state.score > state.bestScore
+    progress = recordRun(progress, index, state.score)
     progress.coins += state.runCoins
     progress.diamonds += state.runDiamonds
     if (persist) saveProgress(progress)
