@@ -32,7 +32,7 @@ export const createTuningPanel = (state: GameState): TuningPanel => {
   const readout = document.createElement('div')
   readout.className =
     'pointer-events-none absolute left-3 bottom-[calc(env(safe-area-inset-bottom)+3.75rem)] ' +
-    'rounded bg-slate-900/70 px-2 py-1 font-mono text-[11px] text-white'
+    'rounded bg-slate-900/70 px-2 py-1 font-mono text-[11px] text-white empty:hidden'
 
   const panel = document.createElement('div')
   panel.className = `pointer-events-auto ${PANEL_CLASSES}`

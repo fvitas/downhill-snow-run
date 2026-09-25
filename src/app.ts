@@ -199,7 +199,10 @@ export const createGame = (mount: GameMount): Game => {
     previous = now
     handle = requestAnimationFrame(frame)
 
-    if (state.screen === 'map') return
+    if (state.screen === 'map') {
+      panel?.setReadout('')
+      return
+    }
 
     if (!state.paused) {
       if (!state.started && !runOver(state)) stepCountIn(dt)

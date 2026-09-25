@@ -156,7 +156,8 @@ const place = (rng: Rng, plan: Plan, kind: HazardKind, y: number, difficulty: nu
     }
     case 'kid': {
       const dir = side(rng)
-      add(plan, makeHazard('kid', dir > 0 ? 34 : W - 34, y, dir), 64)
+      // Far enough off the wall that the stone pile behind the kid stays on screen.
+      add(plan, makeHazard('kid', dir > 0 ? 44 : W - 44, y, dir), 64)
       return 300
     }
     case 'topple':

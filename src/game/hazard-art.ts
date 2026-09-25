@@ -502,7 +502,7 @@ const drawShotFlying = (ctx: CanvasRenderingContext2D, theme: Theme, shot: Shot,
   if (u >= 1) return
   const gx = shot.fromX + (shot.x - shot.fromX) * u
   const gy = shot.fromY + (shot.y - shot.fromY) * u - camY
-  const lift = 4 * u * (1 - u) * 110 + (1 - u) * 18 * KID.size
+  const lift = 4 * u * (1 - u) * 110 + (1 - u) * KID.hand
   ctx.fillStyle = theme.shadow
   ctx.beginPath()
   ctx.ellipse(gx, gy, 8 * (1 - lift / 260), 3.5, 0, 0, Math.PI * 2)
@@ -514,50 +514,22 @@ const drawShotFlying = (ctx: CanvasRenderingContext2D, theme: Theme, shot: Shot,
 const kidArm = (age: number): number =>
   KID.throws.reduce((arm, { at }) => (age > at - 0.3 && age < at ? -1 : age >= at && age < at + 0.2 ? 1 : arm), 0)
 
+// Feet in the stored frame; the left frames are mirrors, so their x is measured from the other side.
+const KID_FEET = { x: 100, y: 168 }
+const KID_SCALE = SPRITE_SCALE * 0.75
+
 const drawKid = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: number, dir: number, arm: number): void => {
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.scale(KID.size, KID.size)
+  const frame = arm < 0 ? 1 : arm > 0 ? 2 : 0
+  const image = sprite(`kid/${dir > 0 ? 'right' : 'left'}-${frame}.png`)
+  if (!image) return
+  const w = image.naturalWidth * KID_SCALE
+  const h = image.naturalHeight * KID_SCALE
+  const feetX = (dir > 0 ? KID_FEET.x : image.naturalWidth - KID_FEET.x) * KID_SCALE
   ctx.fillStyle = theme.shadow
   ctx.beginPath()
-  ctx.ellipse(0, 1, 13, 5, 0, 0, Math.PI * 2)
+  ctx.ellipse(x - dir * 5, y - 2, 18, 5, 0, 0, Math.PI * 2)
   ctx.fill()
-  for (const [dx, dy, seed] of [
-    [-13, 2, 11],
-    [-19, 3, 12],
-    [-16, -2, 13],
-  ] as const) drawStone(ctx, stoneFor(seed), IDENTITY, dir * dx, dy, 3.5, ROCK_PALETTE, 'rgba(0, 0, 0, 0)')
-  ctx.fillStyle = '#1f2937'
-  ctx.fillRect(-6, -4, 5, 5)
-  ctx.fillRect(1, -4, 5, 5)
-  ctx.strokeStyle = '#2f8f5b'
-  ctx.lineWidth = 4
-  ctx.lineCap = 'round'
-  const hand: readonly [number, number] = arm < 0 ? [-dir * 3, -29] : arm > 0 ? [dir * 17, -17] : [dir * 9, -7]
-  ctx.beginPath()
-  ctx.moveTo(dir * 6, -15)
-  ctx.lineTo(hand[0], hand[1])
-  ctx.moveTo(-dir * 6, -15)
-  ctx.lineTo(-dir * 9, -7)
-  ctx.stroke()
-  ctx.fillStyle = '#34a36b'
-  ctx.beginPath()
-  ctx.ellipse(0, -11, 8, 10, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#f1c7a5'
-  ctx.beginPath()
-  ctx.arc(0, -24, 6.5, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#e2483c'
-  ctx.beginPath()
-  ctx.arc(0, -25, 6.8, Math.PI, 0)
-  ctx.fill()
-  ctx.fillStyle = '#ffffff'
-  ctx.beginPath()
-  ctx.arc(0, -32, 3, 0, Math.PI * 2)
-  ctx.fill()
-  if (arm < 0) drawStone(ctx, stoneFor(14), IDENTITY, hand[0], hand[1] - 2, 4, ROCK_PALETTE, 'rgba(0, 0, 0, 0)')
-  ctx.restore()
+  ctx.drawImage(image, x - feetX, y - KID_FEET.y * KID_SCALE, w, h)
 }
 
 const SNOWBALL_SEED = 5

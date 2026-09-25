@@ -69,7 +69,9 @@ export const KID = {
   flight: 1,
   // How long a landed lump stays hard enough to crash on.
   lethal: 1.2,
-  size: 1.4,
+  // How high above the ground the stone leaves the hand, and how far in front of the kid.
+  hand: 19,
+  reach: 16,
   // The first lands on the line just before the ball gets there, the second beside it as it passes.
   throws: [
     { at: 0.9, lead: 0.35, off: 0 },
@@ -216,7 +218,7 @@ const stepKid = (state: GameState, hazard: Hazard, tick: number): void => {
   for (const { at, lead, off } of KID.throws) {
     if (before >= at || hazard.age < at) continue
     hazard.shots.push({
-      fromX: hazard.x + hazard.dir * 10,
+      fromX: hazard.x + hazard.dir * KID.reach,
       fromY: hazard.y - 20,
       x: clamp(state.x - hazard.dir * off, 40, W - 40),
       y: state.y + REFERENCE_SPEED * (KID.flight + lead),
@@ -314,7 +316,7 @@ const shapesOf = (hazard: Hazard, ballY: number): Capsule[] => {
     case 'bear':
       return [bar(x - 24, x + 24, y - 12, 15)]
     case 'kid':
-      return [circle(x, y - 8, 12)]
+      return [circle(x, y - 6, 9)]
     case 'snowball':
       return hazard.age < 0 || hazard.spent ? [] : [circle(x, y, hazard.size - 3)]
     case 'topple': {

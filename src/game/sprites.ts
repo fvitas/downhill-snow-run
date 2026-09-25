@@ -16,6 +16,7 @@ export const SPRITE_PATHS: readonly string[] = ['left', 'right'].flatMap((side) 
   ...[0, 1, 2, 3].flatMap((frame) => [`bear/${side}-${frame}.png`, `deer/${side}-${frame}.png`]),
   `skier/red-${side}.png`,
   `skier/teal-${side}.png`,
+  ...[0, 1, 2].map((frame) => `kid/${side}-${frame}.png`),
 ])
 
 // Asked for up front so the first bear on the slope isn't an empty frame.
