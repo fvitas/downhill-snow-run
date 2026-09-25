@@ -18,10 +18,6 @@ export type LevelMap = {
 
 // Stepping down in equal *height* leaves wider-looking gaps wherever the piste runs diagonally, so
 // each node is instead placed this far from the previous one, centre to centre.
-// Temporary, while obstacles are being designed: every level is playable in dev. Locked nodes
-// keep their grey paint and the save is untouched, so the real position is still visible.
-const UNLOCK_ALL_LEVELS = import.meta.env.DEV
-
 const NODE_STEP = 85
 // Extra run-in before the last level, so the finish gate clears the node above it.
 const FINISH_GAP = 70
@@ -341,7 +337,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     const unlocked = progress?.unlocked ?? 1
     const state = index < unlocked ? 'done' : index === unlocked ? 'now' : 'lock'
     // A locked level is a padlock and nothing else, bonus or not.
-    const locked = state === 'lock' && !UNLOCK_ALL_LEVELS
+    const locked = state === 'lock'
 
     if (level.bonus && !locked) {
       slot.append(
