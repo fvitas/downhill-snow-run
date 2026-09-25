@@ -148,11 +148,8 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     '<path d="M2 12h3" /><path d="M19 12h3" /><path d="M12 2v3" /><path d="M12 19v3" />' +
     '<circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="3" /></svg>Next run'
 
-  const booting = div(
-    'absolute inset-0 z-20 grid place-items-center bg-[#0a4478] text-[0.8rem] font-bold ' +
-      'tracking-[0.1em] text-[#cfe9f6] transition-opacity duration-300',
-  )
-  booting.textContent = 'BAKING TILES…'
+  // Plain sky until the plate and props are in: the app background is the same blue.
+  const booting = div('absolute inset-0 z-20 bg-[#0a4478]')
 
   stage.append(scroller, hud, jump, booting)
   root.append(stage)
@@ -595,8 +592,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
       pendingFocus = 0
       onScroll()
     }
-    booting.style.opacity = '0'
-    booting.addEventListener('transitionend', () => booting.remove(), { once: true })
+    booting.remove()
   }
 
   void boot()
