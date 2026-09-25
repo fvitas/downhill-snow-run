@@ -45,6 +45,9 @@ export const penalty = (state: GameState, points: number, x: number, y: number):
 // Ghosting through, or the beat after a helmet save: nothing lethal can land.
 export const untouchable = (state: GameState): boolean => state.ghost > 0 || state.shield > 0
 
+// Ghosting clean through a thing is as close as a pass gets, so each one pays like a near miss.
+export const phasing = (state: GameState): boolean => state.ghost > 0
+
 // True when the helmet took it; the caller then treats the obstacle as passed.
 export const trySave = (state: GameState, x: number, y: number): boolean => {
   if (!state.helmet) return false

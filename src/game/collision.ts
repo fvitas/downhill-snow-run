@@ -1,7 +1,7 @@
 import { avalancheCaught } from './avalanche.ts'
 import { checkHazards } from './hazards.ts'
 import { burst } from './particles.ts'
-import { award, kill, nearMiss, treeHitExtents, trySave, untouchable } from './scoring.ts'
+import { award, kill, nearMiss, phasing, treeHitExtents, trySave, untouchable } from './scoring.ts'
 import type { GameState, Rock, Tree } from './state.ts'
 import { ballXAt, distanceToStepSq } from './sweep.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
@@ -10,7 +10,7 @@ import { COIN_POINTS, DIAMOND_POINTS } from './world.ts'
 const SCAN_WINDOW = 120
 const COIN_RADIUS = 30
 // A rock this close to the ball's edge counts as a near miss once the ball pulls clear of it.
-const ROCK_NEAR_PX = 35
+const ROCK_NEAR_PX = 60
 
 const rockClearance = (state: GameState, rock: Rock): number =>
   Math.sqrt(distanceToStepSq(state, rock.x, rock.y, 1)) - rock.radius - state.tuning.ballRadius
@@ -42,6 +42,11 @@ const checkRocks = (state: GameState): void => {
     if (Math.abs(rock.y - state.y) > SCAN_WINDOW) continue
     const clearance = rockClearance(state, rock)
     if (clearance <= -4) {
+      if (phasing(state)) {
+        rock.grazed = true
+        nearMiss(state, rock.x, rock.y - rock.radius - 16)
+        continue
+      }
       if (untouchable(state) || trySave(state, rock.x, rock.y)) {
         rock.grazed = true
         continue
@@ -70,8 +75,7 @@ const checkTrees = (state: GameState): void => {
 
     const { rx, ry } = treeHitExtents(state, tree)
     if (distanceToStepSq(state, tree.x, tree.y, ry / rx) <= rx * rx) {
-      // Ghosting straight through a trunk is as close as a pass gets, so it pays like one.
-      if (state.ghost > 0) {
+      if (phasing(state)) {
         if (!tree.grazed) graze(state, tree, state.x)
         continue
       }

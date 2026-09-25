@@ -23,7 +23,6 @@ export type {
   Pickup,
   PowerKind,
   Rock,
-  Sign,
   TrailPoint,
   Tree,
 } from './world.ts'

@@ -16,7 +16,7 @@ import {
 import { drawPine, drawShadow } from './pine.ts'
 import { createRng } from './rng.ts'
 import { sprite } from './sprites.ts'
-import type { GameState, Hazard, Sign, Theme } from './state.ts'
+import type { GameState, Hazard, Theme } from './state.ts'
 import { axisAngle, drawStone, IDENTITY, ROCK_PALETTE, SNOW_PALETTE, stoneFor } from './stone.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
 import type { Shot } from './world.ts'
@@ -26,13 +26,13 @@ import type { Shot } from './world.ts'
 const W = LOGICAL_WIDTH
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
 
-const drawLog = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: number, dir: number): void => {
+const drawLog = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: number, dir: number, tilt: number): void => {
   const { len, h } = LOG
   const half = len / 2
   ctx.save()
   ctx.translate(x, y)
   ctx.scale(dir, 1)
-  ctx.rotate(LOG.tilt)
+  ctx.rotate(tilt)
 
   ctx.fillStyle = theme.shadow
   ctx.beginPath()
@@ -872,18 +872,6 @@ const drawJump = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: num
   drawFlag(ctx, right + 8, y)
 }
 
-// Painted on the practice slope: the station's name, big and faint, a beat before you reach it.
-export const drawSign = (ctx: CanvasRenderingContext2D, theme: Theme, sign: Sign, camY: number): void => {
-  ctx.save()
-  ctx.globalAlpha = 0.55
-  ctx.fillStyle = theme.ink
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.font = '800 34px system-ui, sans-serif'
-  ctx.fillText(sign.text.toUpperCase(), W / 2, sign.y - camY)
-  ctx.restore()
-}
-
 // Flat things the ball runs over or into: holes, ramps, tracks and landing marks.
 export const drawHazardUnder = (ctx: CanvasRenderingContext2D, state: GameState, hazard: Hazard, camY: number): void => {
   const y = hazard.y - camY
@@ -926,7 +914,7 @@ export const drawHazardStanding = (ctx: CanvasRenderingContext2D, state: GameSta
       drawStone(ctx, stoneFor(Math.floor(hazard.homeY) ^ 0x2b), IDENTITY, hazard.x, y, hazard.size, ROCK_PALETTE, theme.shadow)
       return
     case 'log':
-      drawLog(ctx, theme, hazard.x, y, hazard.dir)
+      drawLog(ctx, theme, hazard.x, y, hazard.dir, hazard.size)
       return
     case 'net':
       drawNetRun(ctx, theme, hazard.x - hazard.size, hazard.x + hazard.size, y)

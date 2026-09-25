@@ -152,24 +152,13 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     '<path d="M2 12h3" /><path d="M19 12h3" /><path d="M12 2v3" /><path d="M12 19v3" />' +
     '<circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="3" /></svg>Next run'
 
-  // Level 0: every obstacle and power-up laid out one at a time, to try each before meeting it.
-  const sandbox = document.createElement('button')
-  sandbox.type = 'button'
-  sandbox.dataset.ui = ''
-  sandbox.className =
-    'absolute bottom-[calc(env(safe-area-inset-bottom)+1.1rem)] left-3.5 z-10 flex items-center ' +
-    'gap-1.5 rounded-full bg-[rgba(9,38,54,0.74)] px-4 py-2.5 text-xs font-extrabold text-white ' +
-    'shadow-[0_8px_18px_rgba(9,38,54,0.35)] backdrop-blur-lg transition-transform active:scale-[0.97]'
-  sandbox.textContent = '0 · Sandbox'
-  sandbox.addEventListener('click', () => onPlay(0))
-
   const booting = div(
     'absolute inset-0 z-20 grid place-items-center bg-[#0a4478] text-[0.8rem] font-bold ' +
       'tracking-[0.1em] text-[#cfe9f6] transition-opacity duration-300',
   )
   booting.textContent = 'BAKING TILES…'
 
-  stage.append(scroller, hud, jump, sandbox, booting)
+  stage.append(scroller, hud, jump, booting)
   root.append(stage)
 
   let head: Plate | null = null

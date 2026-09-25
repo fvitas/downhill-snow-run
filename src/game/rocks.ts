@@ -29,7 +29,7 @@ export const stepRocks = (state: GameState, dt: number): void => {
     if (rock.x < -rock.radius || rock.x > LOGICAL_WIDTH + rock.radius) continue
     rock.x += rock.vx * dt
     rock.y += rock.vy * dt
-    rock.angle += (rock.vx / rock.radius) * dt
+    rock.angle += (Math.hypot(rock.vx, rock.vy) / rock.radius) * dt
   }
 }
 

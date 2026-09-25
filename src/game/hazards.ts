@@ -1,4 +1,4 @@
-import { award, kill, nearMiss, penalty, pop, trySave, untouchable } from './scoring.ts'
+import { award, kill, nearMiss, penalty, phasing, pop, trySave, untouchable } from './scoring.ts'
 import type { GameState } from './state.ts'
 import { ballXAt, closestToStep, type Closest } from './sweep.ts'
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport.ts'
@@ -21,6 +21,8 @@ export const isKiller = (kind: HazardKind): boolean => !HARMLESS.includes(kind) 
 const HIT_FORGIVE_PX = 3
 // Clearance under which passing a killer counts as a near miss; it pays as the ball pulls away.
 const NEAR_PX = 35
+// Things on the move are harder to judge, so they pay from further off.
+const MOVING_NEAR_PX = 60
 // Only hazards this close in y are tested; every shape reaches well short of it.
 const SCAN_PX = 420
 
@@ -28,7 +30,8 @@ export const POWER_SECONDS = 5
 export const GATE_HALF = 34
 export const GATE_POINTS = 50
 export const JUMP = { w: 110, ramp: 110, air: 190, lip: 0.45, lift: 56, grow: 0.9, points: 50 }
-export const LOG = { len: 190, h: 26, tilt: -0.07 }
+// Tilt in radians; every log lies on a slant between these, so one end is always the way round.
+export const LOG = { len: 190, h: 26, tiltMin: 0.35, tiltMax: 0.6 }
 export const NET_HEIGHT = 34
 export const HOLE_R = 46
 export const TOPPLE_R = 19
@@ -218,6 +221,7 @@ const stepKid = (state: GameState, hazard: Hazard, tick: number): void => {
       x: clamp(state.x - hazard.dir * off, 40, W - 40),
       y: state.y + REFERENCE_SPEED * (KID.flight + lead),
       age: 0,
+      grazed: false,
     })
   }
 }
@@ -292,7 +296,7 @@ const shapesOf = (hazard: Hazard, ballY: number): Capsule[] => {
       return [circle(x, y, hazard.size * 0.9)]
     case 'log': {
       const half = LOG.len / 2
-      const tilt = LOG.tilt * dir
+      const tilt = hazard.size * dir
       const dx = Math.cos(tilt) * half
       const dy = Math.sin(tilt) * half
       return [{ ax: x - dx, ay: y - dy, bx: x + dx, by: y + dy, r: LOG.h / 2 }]
@@ -360,6 +364,12 @@ const hit = (state: GameState, hazard: Hazard): void => {
     penalty(state, cost, hazard.x, hazard.y - 40)
     return
   }
+  if (phasing(state)) {
+    if (!hazard.grazed) nearMiss(state, hazard.x, hazard.y - 24)
+    hazard.grazed = true
+    hazard.near = false
+    return
+  }
   if (untouchable(state)) {
     hazard.grazed = true
     hazard.near = false
@@ -377,6 +387,11 @@ const checkShots = (state: GameState, hazard: Hazard): void => {
   for (const shot of hazard.shots) {
     if (shot.age < KID.flight || shot.age > KID.flight + KID.lethal) continue
     if (closestToStep(state, shot.x, shot.y, shot.x, shot.y).distance > reach) continue
+    if (phasing(state)) {
+      if (!shot.grazed) nearMiss(state, shot.x, shot.y - 24)
+      shot.grazed = true
+      continue
+    }
     if (untouchable(state)) continue
     // Broken under the helmet, so the same lump can't take a second one.
     if (trySave(state, shot.x, shot.y)) {
@@ -431,7 +446,8 @@ export const checkHazards = (state: GameState): void => {
       continue
     }
     if (!isKiller(hazard.kind) || hazard.grazed) continue
-    if (near.distance <= NEAR_PX) {
+    const nearPx = CROSSERS[hazard.kind] || hazard.kind === 'snowball' ? MOVING_NEAR_PX : NEAR_PX
+    if (near.distance <= nearPx) {
       hazard.near = true
     } else if (hazard.near) {
       hazard.near = false

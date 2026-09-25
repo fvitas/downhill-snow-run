@@ -1,4 +1,4 @@
-import { crosserPath, GATE_POINTS, isKiller, JUMP, makeHazard, tailPx } from './hazards.ts'
+import { crosserPath, GATE_POINTS, isKiller, JUMP, LOG, makeHazard, tailPx } from './hazards.ts'
 import { rngInt, rngPick, rngRange, type Rng } from './rng.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
 import { COIN_POINTS, type Collectible, type Hazard, type HazardKind, type Pickup, type PowerKind, type Tree } from './world.ts'
@@ -119,9 +119,14 @@ const place = (rng: Rng, plan: Plan, kind: HazardKind, y: number, difficulty: nu
       add(plan, makeHazard('boulder', rngRange(rng, 100, 440), y, 1, size), size + 52)
       return 0
     }
-    case 'log':
-      add(plan, makeHazard('log', rngRange(rng, 140, 400), y, side(rng)), 150, 64)
+    case 'log': {
+      const log = makeHazard('log', rngRange(rng, 150, 390), y, side(rng), rngRange(rng, LOG.tiltMin, LOG.tiltMax))
+      plan.hazards.push(log)
+      plan.points += POINTS_PER_KILLER
+      // Reaching past an end takes about 150 px of slope at full lean, so the clearing starts well above.
+      plan.clearings.push({ x: log.homeX, y: y - 50, rx: 200, ry: 200 })
       return 0
+    }
     case 'net': {
       // One way through, narrower the further in the game you are.
       const gap = lerp(170, 110, difficulty)
@@ -139,7 +144,11 @@ const place = (rng: Rng, plan: Plan, kind: HazardKind, y: number, difficulty: nu
     case 'snowmobile':
     case 'deer':
     case 'bear': {
-      const hazard = makeHazard(kind, rngRange(rng, 150, 390), y, side(rng))
+      const homeX = rngRange(rng, 150, 390)
+      const dir = side(rng)
+      // From the far side the sled is on screen long before it cuts the line, low enough to react to.
+      const from = kind === 'snowmobile' ? (homeX < CX ? -1 : 1) : dir
+      const hazard = makeHazard(kind, homeX, y, from)
       add(plan, hazard, 50)
       const path = crosserPath(hazard)
       if (path) plan.lanes.push({ ax: path.x0, ay: path.y0, bx: path.x1, by: path.y1, r: 44 })
