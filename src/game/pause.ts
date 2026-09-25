@@ -1,4 +1,4 @@
-import type { GameState } from './state.ts'
+import { runOver, type GameState } from './state.ts'
 
 type OrientationLockScreen = ScreenOrientation & {
   lock?: (orientation: 'portrait') => Promise<void>
@@ -35,6 +35,11 @@ export const attachPause = (
     state.paused = false
   }
 
+  // The map and the crash or finish card have nothing to resume, so leaving the app there is not a pause.
+  const pauseIfRunning = () => {
+    if (state.screen === 'run' && !runOver(state)) show('Tap to continue')
+  }
+
   // Only a touch device can rotate into portrait; a desktop window is landscape and must not
   // be told to turn itself around.
   const rotatable = window.matchMedia('(pointer: coarse)').matches
@@ -44,7 +49,7 @@ export const attachPause = (
     if (blockedByOrientation) {
       show('Rotate to portrait')
     } else if (document.hidden) {
-      show('Tap to continue')
+      pauseIfRunning()
     }
   }
 
@@ -55,7 +60,7 @@ export const attachPause = (
   })
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) show('Tap to continue')
+    if (document.hidden) pauseIfRunning()
   })
 
   window.addEventListener('resize', evaluate)
