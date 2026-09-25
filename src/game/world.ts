@@ -34,7 +34,72 @@ export type Rock = {
   vx: number
   angle: number
   rolling: boolean
+  // Near-miss bookkeeping: inside reach last frame, and whether this one has already paid.
+  near: boolean
+  grazed: boolean
 }
+
+export const HAZARD_KINDS = [
+  'boulder',
+  'log',
+  'net',
+  'hole',
+  'skier',
+  'snowmobile',
+  'deer',
+  'bear',
+  'kid',
+  'snowball',
+  'topple',
+  'icicle',
+  'snowman',
+  'bush',
+  'gate',
+  'jump',
+  'wolf',
+  'fox',
+] as const
+
+export type HazardKind = (typeof HAZARD_KINDS)[number]
+
+export type PowerKind = 'helmet' | 'ghost' | 'double'
+
+// A snowball the kid has thrown: `age` runs from the throw, on the hazards' reference clock.
+export type Shot = { fromX: number; fromY: number; x: number; y: number; age: number }
+
+// The trail a wolf or fox leaves in the snow.
+export type Print = { x: number; y: number; heading: number; left: boolean }
+
+// Everything on the slope that is not a pine, a coin or a rolling rock. The home fields are
+// seeded; the rest are live and reset with the run.
+export type Hazard = {
+  kind: HazardKind
+  homeX: number
+  homeY: number
+  dir: 1 | -1
+  // Radius for a boulder, half-length for a run of net; unused by the rest.
+  size: number
+  x: number
+  y: number
+  vx: number
+  vy: number
+  heading: number
+  // Seconds since it woke; negative while it is still waiting for the ball.
+  age: number
+  near: boolean
+  grazed: boolean
+  // Broken, taken, given up or saved against: it can neither hurt nor pay any more.
+  spent: boolean
+  // Seconds since the ball ploughed through it, for the snowman and the bush.
+  hitAge: number
+  shots: Shot[]
+  prints: Print[]
+}
+
+export type Pickup = { x: number; y: number; kind: PowerKind; taken: boolean }
+
+// A word painted on the practice slope, so each station says what it is before you reach it.
+export type Sign = { y: number; text: string }
 
 export type TrailPoint = { x: number; y: number }
 

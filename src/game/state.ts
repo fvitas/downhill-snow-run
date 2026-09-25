@@ -1,33 +1,54 @@
 import type { TuningConfig } from './config.ts'
 import { buildCourse, levelAt, type Course, type Level } from './levels.ts'
 import { AVALANCHE_LEAD_PX } from './avalanche.ts'
+import { resetHazard } from './hazards.ts'
 import { resetRock } from './rocks.ts'
 import type { Theme } from './themes.ts'
 import { cameraYFor, LOGICAL_WIDTH } from './viewport.ts'
 import {
   METRES_PER_POINT,
   PIXELS_PER_METRE,
+  type HazardKind,
   type Particle,
   type TrailPoint,
   type Tree,
 } from './world.ts'
 
-export type { Collectible, Particle, ParticleKind, Rock, TrailPoint, Tree } from './world.ts'
+export type {
+  Collectible,
+  Hazard,
+  HazardKind,
+  Particle,
+  ParticleKind,
+  Pickup,
+  PowerKind,
+  Rock,
+  Sign,
+  TrailPoint,
+  Tree,
+} from './world.ts'
 export type { Theme } from './themes.ts'
 export type { Course, Level } from './levels.ts'
 export { PIXELS_PER_METRE, TRUNK_HALF_SCALE } from './world.ts'
 
 export type RenderStyle = 'faux3d' | 'flat'
 
-// A floating "+8" beside the ball. Lives in world space so it scrolls with the slope.
-export type Pop = { x: number; y: number; text: string; life: number }
+// A floating "+8" beside the ball. Lives in world space so it scrolls with the slope. Points are in
+// the ball's colour; words like "Saved" are in ink.
+export type PopTone = 'ink'
+export type Pop = { x: number; y: number; text: string; life: number; tone?: PopTone }
+
+// Off the ground from the foot of a ramp until the landing; `lip` is the ramp's top edge in world y.
+export type Air = { lip: number }
+
+export type HelmetBreak = { x: number; y: number; age: number }
 
 // Set on the frame a tree is grazed; the renderer reads it to sway the tree.
 export type Wobble = { tree: Tree; age: number; side: 1 | -1 }
 
 // Everything needed to re-judge a crash after the fact, and to draw it magnified.
 export type HitRecord = {
-  kind: 'tree' | 'wall' | 'rock' | 'avalanche'
+  kind: 'tree' | 'wall' | 'rock' | 'avalanche' | HazardKind
   score: number
   speed: number
   angleDeg: number
@@ -80,6 +101,14 @@ export type GameState = {
   // The impact hold, in seconds, and the crash shake as a 0–1 strength. Both count down to zero.
   freeze: number
   shake: number
+  // Power-ups: the helmet is a single save, ghost and ×2 are seconds left, and the shield is the
+  // blink after a save when nothing can land.
+  helmet: boolean
+  ghost: number
+  double: number
+  shield: number
+  air: Air | null
+  helmetBreak: HelmetBreak | null
   lastHit: HitRecord | null
   // The trunk that killed you, kept so the crash can be drawn with the ball buried behind it.
   hitTree: Tree | null
@@ -160,6 +189,12 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     avalancheY: -AVALANCHE_LEAD_PX,
     freeze: 0,
     shake: 0,
+    helmet: false,
+    ghost: 0,
+    double: 0,
+    shield: 0,
+    air: null,
+    helmetBreak: null,
     lastHit: null,
     hitTree: null,
     inspect: { on: false, zoom: 8, panX: 0, panY: 0 },
@@ -219,6 +254,12 @@ export const resetRun = (state: GameState): void => {
   state.avalancheY = -AVALANCHE_LEAD_PX
   state.freeze = 0
   state.shake = 0
+  state.helmet = false
+  state.ghost = 0
+  state.double = 0
+  state.shield = 0
+  state.air = null
+  state.helmetBreak = null
   state.lastHit = null
   state.hitTree = null
   state.inspect.on = false
@@ -235,4 +276,6 @@ export const resetRun = (state: GameState): void => {
   for (const tree of state.course.trees) tree.grazed = false
   for (const collectible of state.course.collectibles) collectible.taken = false
   for (const rock of state.course.rocks) resetRock(rock)
+  for (const hazard of state.course.hazards) resetHazard(hazard)
+  for (const pickup of state.course.pickups) pickup.taken = false
 }

@@ -1,87 +1,24 @@
-import { avalancheCaught, pushAvalanche } from './avalanche.ts'
+import { avalancheCaught } from './avalanche.ts'
+import { checkHazards } from './hazards.ts'
 import { burst } from './particles.ts'
-import { TRUNK_HALF_SCALE, type GameState, type HitRecord, type Rock, type Tree } from './state.ts'
+import { award, kill, nearMiss, treeHitExtents, trySave, untouchable } from './scoring.ts'
+import type { GameState, Rock, Tree } from './state.ts'
+import { ballXAt, distanceToStepSq } from './sweep.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
 import { COIN_POINTS, DIAMOND_POINTS } from './world.ts'
 
 const SCAN_WINDOW = 120
-const COMBO_BASE = 2
-const COMBO_STEP = 2
 const COIN_RADIUS = 30
-// How long the wreck is left on screen — shake, thrown snow and all — before the card covers it.
-const FREEZE_SECONDS = 1.1
-// Shake strength at the moment of impact; stepEffects bleeds it off over a quarter second.
-const SHAKE_KICK = 1
+// A rock this close to the ball's edge counts as a near miss once the ball pulls clear of it.
+const ROCK_NEAR_PX = 35
 
-// Trunk only — the canopy triangles are decoration — minus a few pixels so a scrape down the side
-// of the pole isn't a crash. Shallow in y: brushing past in front of a trunk should read as a pass.
-export const treeHitExtents = (state: GameState, tree: Tree): { rx: number; ry: number } => {
-  const { ballRadius, treeHitScale, hitForgivePx, hitDepthScale } = state.tuning
-  const rx = Math.max(1, tree.radius * TRUNK_HALF_SCALE * treeHitScale + ballRadius - hitForgivePx)
-  return { rx, ry: rx * hitDepthScale }
-}
-
-// Distance from a point to this frame's travel segment, with y stretched by `depth` so the
-// circle test below is really an ellipse: wide across the slope, shallow front-to-back.
-const distanceToStepSq = (state: GameState, x: number, y: number, depth: number): number => {
-  const ay = state.prevY / depth
-  const by = state.y / depth
-  const py = y / depth
-  const dx = state.x - state.prevX
-  const dy = by - ay
-  const lengthSq = dx * dx + dy * dy
-  const t =
-    lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((x - state.prevX) * dx + (py - ay) * dy) / lengthSq))
-  const offX = state.prevX + t * dx - x
-  const offY = ay + t * dy - py
-  return offX * offX + offY * offY
-}
-
-// Where the ball was across the slope at the moment it drew level with `y`.
-const ballXAt = (state: GameState, y: number): number => {
-  const span = state.y - state.prevY
-  if (span <= 0) return state.x
-  const t = Math.min(1, Math.max(0, (y - state.prevY) / span))
-  return state.prevX + (state.x - state.prevX) * t
-}
-
-// Each near miss in a chain is worth two more than the last, not double, with no ceiling.
-const comboPoints = (combo: number): number =>
-  COMBO_BASE + COMBO_STEP * Math.max(0, combo - 1)
-
-// Rocks move, so the ellipse trick used for trunks does not apply: plain circle against the step.
-const hitRock = (state: GameState, rock: Rock): boolean => {
-  const reach = rock.radius + state.tuning.ballRadius - 4
-  return distanceToStepSq(state, rock.x, rock.y, 1) <= reach * reach
-}
-
-const kill = (state: GameState, kind: HitRecord['kind'], tree: Tree | null): void => {
-  state.dead = true
-  state.pressed = false
-  state.combo = 0
-  state.freeze = FREEZE_SECONDS
-  state.shake = SHAKE_KICK
-  state.hitTree = tree
-  state.lastHit = {
-    kind,
-    score: state.score,
-    speed: state.speed,
-    angleDeg: (state.angle * 180) / Math.PI,
-    ball: { x: state.x, y: state.y, radius: state.tuning.ballRadius },
-    step: { fromX: state.prevX, fromY: state.prevY, toX: state.x, toY: state.y },
-    tree: tree ? { x: tree.x, y: tree.y, radius: tree.radius, ...treeHitExtents(state, tree) } : null,
-  }
-  burst(state, state.x, state.y, 30, 'clod')
-}
+const rockClearance = (state: GameState, rock: Rock): number =>
+  Math.sqrt(distanceToStepSq(state, rock.x, rock.y, 1)) - rock.radius - state.tuning.ballRadius
 
 const graze = (state: GameState, tree: Tree, ballX: number): void => {
   tree.grazed = true
-  state.combo += 1
-  const gain = comboPoints(state.combo)
-  state.score += gain
-  state.pops.push({ x: tree.x, y: tree.y - 24, text: `+${gain}`, life: 1 })
+  nearMiss(state, tree.x, tree.y - 24)
   state.wobbles.push({ tree, age: 0, side: tree.x < ballX ? -1 : 1 })
-  pushAvalanche(state, state.combo)
   burst(state, tree.x, tree.y - tree.radius * 0.4, 6)
 }
 
@@ -95,41 +32,34 @@ const collect = (state: GameState): void => {
     const diamond = item.kind === 'diamond'
     if (diamond) state.runDiamonds += 1
     else state.runCoins += 1
-    state.score += diamond ? DIAMOND_POINTS : COIN_POINTS
-    state.pops.push({
-      x: item.x,
-      y: item.y - 20,
-      text: `+${diamond ? DIAMOND_POINTS : COIN_POINTS}`,
-      life: 1,
-    })
+    award(state, diamond ? DIAMOND_POINTS : COIN_POINTS, item.x, item.y - 20)
   }
 }
 
-export const checkCollisions = (state: GameState): void => {
-  if (state.dead) return
-
-  collect(state)
-
-  if (avalancheCaught(state)) {
-    kill(state, 'avalanche', null)
-    return
-  }
-
-  const r = state.tuning.ballRadius
-  if (state.x <= r || state.x >= LOGICAL_WIDTH - r) {
-    kill(state, 'wall', null)
-    return
-  }
-
+const checkRocks = (state: GameState): void => {
   for (const rock of state.course.rocks) {
-    if (!rock.rolling) continue
+    if (!rock.rolling || rock.grazed) continue
     if (Math.abs(rock.y - state.y) > SCAN_WINDOW) continue
-    if (hitRock(state, rock)) {
+    const clearance = rockClearance(state, rock)
+    if (clearance <= -4) {
+      if (untouchable(state) || trySave(state, rock.x, rock.y)) {
+        rock.grazed = true
+        continue
+      }
       kill(state, 'rock', null)
       return
     }
+    if (clearance <= ROCK_NEAR_PX) {
+      rock.near = true
+    } else if (rock.near) {
+      rock.near = false
+      rock.grazed = true
+      nearMiss(state, rock.x, rock.y - rock.radius - 16)
+    }
   }
+}
 
+const checkTrees = (state: GameState): void => {
   const { trees } = state
   for (let i = state.treeFrom; i < state.treeTo; i += 1) {
     const tree = trees[i]
@@ -140,6 +70,20 @@ export const checkCollisions = (state: GameState): void => {
 
     const { rx, ry } = treeHitExtents(state, tree)
     if (distanceToStepSq(state, tree.x, tree.y, ry / rx) <= rx * rx) {
+      // Ghosting straight through a trunk is as close as a pass gets, so it pays like one.
+      if (state.ghost > 0) {
+        if (!tree.grazed) graze(state, tree, state.x)
+        continue
+      }
+      if (untouchable(state)) {
+        tree.grazed = true
+        continue
+      }
+      if (trySave(state, tree.x, tree.y)) {
+        tree.grazed = true
+        state.wobbles.push({ tree, age: 0, side: tree.x < state.x ? -1 : 1 })
+        continue
+      }
       kill(state, 'tree', tree)
       return
     }
@@ -152,3 +96,27 @@ export const checkCollisions = (state: GameState): void => {
   }
 }
 
+export const checkCollisions = (state: GameState): void => {
+  if (state.dead) return
+
+  collect(state)
+
+  // Neither the helmet nor a ghost does anything for the wall or the avalanche.
+  if (avalancheCaught(state)) {
+    kill(state, 'avalanche', null)
+    return
+  }
+
+  const r = state.tuning.ballRadius
+  if (state.x <= r || state.x >= LOGICAL_WIDTH - r) {
+    kill(state, 'wall', null)
+    return
+  }
+
+  checkHazards(state)
+  if (state.dead || state.air) return
+
+  checkRocks(state)
+  if (state.dead) return
+  checkTrees(state)
+}

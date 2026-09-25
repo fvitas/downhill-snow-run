@@ -10,6 +10,8 @@ const approach = (current: number, target: number, maxDelta: number): number => 
 }
 
 export const flip = (state: GameState): void => {
+  // No carving in mid-air: the tap is simply lost until the ball lands.
+  if (state.air && state.y > state.air.lip) return
   state.direction = state.direction === 1 ? -1 : 1
 }
 

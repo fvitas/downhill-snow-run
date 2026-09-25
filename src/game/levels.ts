@@ -1,12 +1,17 @@
 import { pickChunk, TREE_MARGIN, type ChunkTree } from './chunks.ts'
+import { placeFeatures } from './features.ts'
 import { createRng, hashSeed, rngInt, rngPick, rngRange, type Rng } from './rng.ts'
+import { buildSandbox, SANDBOX_START_PX } from './sandbox.ts'
 import {
   COIN_POINTS,
   DIAMOND_POINTS,
   METRES_PER_POINT,
   PIXELS_PER_METRE,
   type Collectible,
+  type Hazard,
+  type Pickup,
   type Rock,
+  type Sign,
   type Tree,
 } from './world.ts'
 import { themeForWorld, type Theme } from './themes.ts'
@@ -30,6 +35,8 @@ export type Level = {
   // The last level has no tape and no bar: the same downhill run as the other 499, it just never
   // ends. The slope is built a block at a time as you reach it.
   endless: boolean
+  // Level 0: an endless practice slope with one of everything on it, off the map's numbered run.
+  sandbox: boolean
   seed: number
   difficulty: number
   distanceM: number
@@ -45,11 +52,13 @@ const SEED_SALT = 0x5c1
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
 
+export const SANDBOX_LEVEL = 0
+
 export const clampLevelIndex = (index: number): number =>
-  Math.min(LEVEL_COUNT, Math.max(1, Math.round(index)))
+  Math.min(LEVEL_COUNT, Math.max(SANDBOX_LEVEL, Math.round(index)))
 
 export const worldOf = (index: number): number =>
-  Math.floor((clampLevelIndex(index) - 1) / LEVELS_PER_WORLD) + 1
+  Math.max(1, Math.floor((clampLevelIndex(index) - 1) / LEVELS_PER_WORLD) + 1)
 
 // Difficulty saws: each world starts easier than the last one ended, then climbs higher than it did.
 const difficultyOf = (world: number, indexInWorld: number): number => {
@@ -58,8 +67,27 @@ const difficultyOf = (world: number, indexInWorld: number): number => {
   return clamp01(acrossGame * 0.78 + acrossWorld * 0.28)
 }
 
+const sandboxLevel = (): Level => ({
+  index: SANDBOX_LEVEL,
+  world: 1,
+  indexInWorld: 0,
+  theme: themeForWorld(1),
+  bonus: false,
+  avalanche: false,
+  endless: true,
+  sandbox: true,
+  seed: hashSeed(SANDBOX_LEVEL, SEED_SALT),
+  difficulty: 0,
+  distanceM: 0,
+  minGapPx: 115,
+  baseSpeed: 220,
+  maxSpeed: 300,
+  speedRampPer1000: 2,
+})
+
 export const levelAt = (rawIndex: number): Level => {
   const index = clampLevelIndex(rawIndex)
+  if (index === SANDBOX_LEVEL) return sandboxLevel()
   const world = worldOf(index)
   const indexInWorld = index - (world - 1) * LEVELS_PER_WORLD
   const difficulty = difficultyOf(world, indexInWorld)
@@ -75,6 +103,7 @@ export const levelAt = (rawIndex: number): Level => {
     bonus,
     avalanche,
     endless,
+    sandbox: false,
     seed: hashSeed(index, SEED_SALT),
     difficulty,
     distanceM: bonus ? 500 : Math.round(lerp(400, 900, difficulty) / 10) * 10,
@@ -89,6 +118,9 @@ export type Course = {
   trees: Tree[]
   collectibles: Collectible[]
   rocks: Rock[]
+  hazards: Hazard[]
+  pickups: Pickup[]
+  signs: Sign[]
   lengthPx: number
   // What a run that grazed everything and skied the whole level would score — the ratings are
   // cut from it. Zero on the endless level, which nobody finishes.
@@ -322,7 +354,8 @@ const fillRocks = (rng: Rng, level: Level, from: number, end: number): Rock[] =>
   const spacing = lerp(ROCK_SPACING, ROCK_SPACING * 0.45, reach)
   const rocks: Rock[] = []
 
-  for (let y = from + spacing; y < end; y += spacing) {
+  // Kept a jitter short of `end`, so no stone starts past it.
+  for (let y = from + spacing; y < end - spacing * 0.3; y += spacing) {
     const fromLeft = rng() < 0.5
     const radius = rngRange(rng, 20, 30)
     const spawnX = fromLeft ? radius : LOGICAL_WIDTH - radius
@@ -338,6 +371,8 @@ const fillRocks = (rng: Rng, level: Level, from: number, end: number): Rock[] =>
       vx: 0,
       angle: 0,
       rolling: false,
+      near: false,
+      grazed: false,
     })
   }
 
@@ -347,6 +382,32 @@ const fillRocks = (rng: Rng, level: Level, from: number, end: number): Rock[] =>
 // How much endless slope is drawn at a time, and how far ahead of the ball the next block lands.
 const ENDLESS_BLOCK_PX = 20_000
 const ENDLESS_LOOKAHEAD_PX = 6_000
+// Nothing but trees for the first stretch, and the last tenth is left clear for the run to the tape.
+const FEATURES_FROM_PX = RUN_IN_PX + 600
+const FEATURES_END_FRACTION = 0.9
+
+type Stretch = Omit<Course, 'lengthPx' | 'perfectScore'> & { points: number }
+
+// Forest plus whatever this level has unlocked, for one stretch of slope.
+const buildStretch = (level: Level, seed: number, from: number, end: number): Stretch => {
+  if (level.sandbox) {
+    const block = buildSandbox(from, end)
+    return { ...block, collectibles: [], points: 0 }
+  }
+  const rng = createRng(seed)
+  const trees = fillTrees(rng, level, from, end)
+  const featureEnd = level.endless ? end : level.distanceM * PIXELS_PER_METRE * FEATURES_END_FRACTION
+  const rocks = fillRocks(createRng(seed ^ 0x1c3b), level, from, featureEnd)
+  const features = placeFeatures(
+    createRng(seed ^ 0x3fa7),
+    level.index,
+    level.difficulty,
+    trees,
+    Math.max(from, FEATURES_FROM_PX),
+    featureEnd,
+  )
+  return { trees, rocks, signs: [], ...features }
+}
 
 export const buildCourse = (level: Level): Course => {
   const lengthPx = level.endless ? ENDLESS_BLOCK_PX : level.distanceM * PIXELS_PER_METRE
@@ -357,26 +418,24 @@ export const buildCourse = (level: Level): Course => {
       0,
     )
     const perfectScore = pickups + Math.round(level.distanceM / METRES_PER_POINT)
-    return { trees: [], collectibles, rocks: [], lengthPx, perfectScore }
+    return { trees: [], collectibles, rocks: [], hazards: [], pickups: [], signs: [], lengthPx, perfectScore }
   }
   if (level.endless) {
-    const rng = createRng(level.seed)
-    return {
-      trees: fillTrees(rng, level, RUN_IN_PX, lengthPx),
-      collectibles: [],
-      rocks: fillRocks(createRng(level.seed ^ 0x1c3b), level, RUN_IN_PX, lengthPx),
+    const { points: _points, ...stretch } = buildStretch(
+      level,
+      level.seed,
+      level.sandbox ? SANDBOX_START_PX / 2 : RUN_IN_PX,
       lengthPx,
-      perfectScore: 0,
-    }
+    )
+    return { ...stretch, lengthPx, perfectScore: 0 }
   }
-  const trees = fillTrees(createRng(level.seed), level, RUN_IN_PX, slopeEndPx(lengthPx))
+  const { points, ...stretch } = buildStretch(level, level.seed, RUN_IN_PX, slopeEndPx(lengthPx))
   return {
-    trees,
-    collectibles: [],
-    rocks: fillRocks(createRng(level.seed ^ 0x1c3b), level, RUN_IN_PX, slopeEndPx(lengthPx)),
+    ...stretch,
     lengthPx,
     perfectScore:
-      Math.max(1, trees.length) * POINTS_PER_TREE +
+      Math.max(1, stretch.trees.length) * POINTS_PER_TREE +
+      points +
       Math.round(level.distanceM / METRES_PER_POINT),
   }
 }
@@ -387,14 +446,18 @@ export const extendCourse = (level: Level, course: Course, y: number): void => {
   if (!level.endless || y + ENDLESS_LOOKAHEAD_PX < course.lengthPx) return
   const from = course.lengthPx
   const end = from + ENDLESS_BLOCK_PX
-  const rng = createRng(hashSeed(level.seed, from))
+  const stretch = buildStretch(level, hashSeed(level.seed, from), from, end)
   // A chunk can start a few pixels above the stretch it was built for; terrain.ts walks the array
   // forward only, so the join has to stay sorted.
-  for (const tree of fillTrees(rng, level, from, end)) {
+  for (const tree of stretch.trees) {
     tree.y = Math.max(from, tree.y)
     course.trees.push(tree)
   }
-  for (const rock of fillRocks(rng, level, from, end)) course.rocks.push(rock)
+  course.rocks.push(...stretch.rocks)
+  course.hazards.push(...stretch.hazards)
+  course.pickups.push(...stretch.pickups)
+  course.collectibles.push(...stretch.collectibles)
+  course.signs.push(...stretch.signs)
   course.lengthPx = end
 }
 

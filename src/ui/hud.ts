@@ -285,6 +285,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
       for (const row of [ghostRow, barRow, badgeRow]) row.style.display = level.endless ? 'none' : ''
       endlessPill.style.display = level.endless ? 'block' : 'none'
+      endlessPill.textContent = level.sandbox ? 'SANDBOX' : 'ENDLESS'
       if (level.endless) applySolid(endlessPill, theme.ink, theme.snow)
 
       if (!level.endless) {

@@ -1,6 +1,7 @@
 import { DEFAULT_PRESET } from './game/config.ts'
 import { stepAvalanche } from './game/avalanche.ts'
 import { checkCollisions } from './game/collision.ts'
+import { stepHazards, stepPowers } from './game/hazards.ts'
 import { attachInput } from './game/input.ts'
 import { attachPause, tryLockPortrait } from './game/pause.ts'
 import { emitSpray, stepParticles } from './game/particles.ts'
@@ -16,6 +17,7 @@ import {
 } from './game/progress.ts'
 import { render, stepEffects } from './game/render.ts'
 import { stepRocks } from './game/rocks.ts'
+import { preloadSprites } from './game/sprites.ts'
 import { render3d } from './game/render3d.ts'
 import {
   cameraY,
@@ -119,6 +121,8 @@ export const createGame = (mount: GameMount): Game => {
     onPause: pauseControl.pause,
   })
 
+  preloadSprites()
+
   // Twelve sliders that can break the game — a playtest tool, never shipped.
   const panel = (mount.tuningPanel ?? import.meta.env.DEV) ? createTuningPanel(state) : null
   // Confetti sits over the finish card but under the map, which covers the whole stage.
@@ -170,6 +174,8 @@ export const createGame = (mount: GameMount): Game => {
     extendCourse(state.level, state.course, state.y)
     stepRocks(state, dt)
     stepAvalanche(state, dt)
+    stepHazards(state, dt)
+    stepPowers(state, dt)
     state.elapsed += dt
     // Past the tape nothing can touch you — not a stray trunk, not the wall.
     if (state.coast <= 0) checkCollisions(state)

@@ -13,6 +13,8 @@ export const resetRock = (rock: Rock): void => {
   rock.vx = 0
   rock.angle = 0
   rock.rolling = false
+  rock.near = false
+  rock.grazed = false
 }
 
 export const stepRocks = (state: GameState, dt: number): void => {
@@ -23,18 +25,11 @@ export const stepRocks = (state: GameState, dt: number): void => {
       rock.vx = rock.spawnVx
     }
 
+    // No walls for a rock: it rolls straight out through the far side and is gone.
+    if (rock.x < -rock.radius || rock.x > LOGICAL_WIDTH + rock.radius) continue
     rock.x += rock.vx * dt
     rock.y += rock.vy * dt
     rock.angle += (rock.vx / rock.radius) * dt
-
-    // The walls bounce it back across the slope instead of parking it in a corner.
-    if (rock.x < rock.radius) {
-      rock.x = rock.radius
-      rock.vx = Math.abs(rock.vx)
-    } else if (rock.x > LOGICAL_WIDTH - rock.radius) {
-      rock.x = LOGICAL_WIDTH - rock.radius
-      rock.vx = -Math.abs(rock.vx)
-    }
   }
 }
 
