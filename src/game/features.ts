@@ -7,32 +7,32 @@ const W = LOGICAL_WIDTH
 const CX = W / 2
 
 // The level each thing first turns up on. Keyed by index, not difficulty: difficulty drops back at
-// the start of every world, and a bear should never un-appear.
+// the start of every world, and a bear should never un-appear. Levels 1–5 are trees only.
 const KIND_FROM: readonly (readonly [HazardKind, number])[] = [
-  ['gate', 1],
-  ['snowman', 3],
-  ['boulder', 5],
-  ['jump', 8],
-  ['bush', 11],
-  ['wolf', 14],
-  ['log', 20],
-  ['skier', 24],
-  ['fox', 28],
-  ['net', 32],
-  ['deer', 36],
-  ['hole', 41],
-  ['kid', 46],
-  ['snowmobile', 62],
-  ['bear', 70],
-  ['topple', 80],
-  ['snowball', 90],
-  ['icicle', 100],
+  ['gate', 6],
+  ['snowman', 8],
+  ['boulder', 10],
+  ['jump', 13],
+  ['bush', 16],
+  ['wolf', 19],
+  ['log', 25],
+  ['skier', 29],
+  ['fox', 33],
+  ['net', 37],
+  ['deer', 41],
+  ['hole', 46],
+  ['kid', 51],
+  ['snowmobile', 67],
+  ['bear', 75],
+  ['topple', 85],
+  ['snowball', 95],
+  ['icicle', 105],
 ]
 
 const POWER_FROM: readonly (readonly [PowerKind, number])[] = [
-  ['helmet', 4],
-  ['double', 9],
-  ['ghost', 18],
+  ['helmet', 9],
+  ['double', 14],
+  ['ghost', 23],
 ]
 
 const BUSY_BY_LEVEL = 100
