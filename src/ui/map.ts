@@ -309,9 +309,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
       return
     }
     node.style.color = '#5a2f00'
-    node.style.background = level.bonus
-      ? 'linear-gradient(180deg, #ffd45e, #ec8615)'
-      : 'linear-gradient(180deg, #ffc247, #f79320)'
+    node.style.background = 'linear-gradient(180deg, #ffc247, #f79320)'
     if (level.avalanche) {
       node.style.background = 'linear-gradient(180deg, #ff8f6b, #e8442f)'
       node.style.color = '#fff'
@@ -333,17 +331,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
 
     const unlocked = progress?.unlocked ?? 1
     const state = index < unlocked ? 'done' : index === unlocked ? 'now' : 'lock'
-    // A locked level is a padlock and nothing else, bonus or not.
     const locked = state === 'lock'
-
-    if (level.bonus && !locked) {
-      slot.append(
-        div('absolute -left-[52px] -top-[52px] h-[104px] w-[104px] rounded-full', {
-          background:
-            'radial-gradient(circle, rgba(255, 201, 71, .55), rgba(255, 201, 71, 0) 68%)',
-        }),
-      )
-    }
 
     const node = document.createElement('button')
     node.type = 'button'
@@ -352,14 +340,6 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     if (locked) node.append(createElement(LockKeyhole, { width: 22, height: 22, 'stroke-width': 2.5 }))
     else node.textContent = String(index)
     paintNode(node, state, level)
-    if (level.bonus && !locked) {
-      const gift = div(
-        'absolute -right-[5px] -top-[5px] grid h-6 w-6 place-items-center rounded-full ' +
-          'bg-white text-sm shadow-[0_3px_8px_rgba(13,43,62,0.3)]',
-      )
-      gift.textContent = '🎁'
-      node.append(gift)
-    }
     if (!locked) node.addEventListener('click', () => onPlay(index))
     slot.append(node)
 

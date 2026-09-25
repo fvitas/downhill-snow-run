@@ -292,7 +292,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
         fromNode.textContent = String(level.index)
         applySolid(fromNode, theme.ink, theme.snow)
-        toNode.textContent = level.bonus ? '🎁' : String(level.index + 1)
+        toNode.textContent = String(level.index + 1)
         toNode.style.background = theme.snow
         toNode.style.borderColor = theme.ink
         toNode.style.color = theme.ink
@@ -385,7 +385,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       applyGlass(sheet, theme, { alpha: dark ? 0.72 : 0.82, elevated: true })
       sheet.style.color = theme.ink
       const crashTitle = state.lastHit?.kind === 'avalanche' ? 'CAUGHT' : 'CRASHED'
-      title.textContent = state.finished ? (level.bonus ? 'COLLECTED' : 'FINISH') : crashTitle
+      title.textContent = state.finished ? 'FINISH' : crashTitle
       finalScore.textContent = formatPoints(state.score)
       finalScore.style.color = theme.ball
       finalScore.style.textShadow = `0 2px 10px ${withAlpha(theme.ball, 0.2)}`
@@ -407,9 +407,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
       // A crash banks nothing, so the best on show is the one already saved.
       const best = state.finished ? Math.max(state.bestScore, state.score) : state.bestScore
-      detail.textContent = level.bonus && state.finished
-        ? `${state.runCoins} coins · ${state.runDiamonds} diamonds`
-        : `Best: ${formatPoints(best)}`
+      detail.textContent = `Best: ${formatPoints(best)}`
     },
   }
 }

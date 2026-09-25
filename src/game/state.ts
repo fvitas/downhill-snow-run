@@ -15,7 +15,6 @@ import {
 } from './world.ts'
 
 export type {
-  Collectible,
   Hazard,
   HazardKind,
   Particle,
@@ -93,8 +92,6 @@ export type GameState = {
   bestReach: number
   // A chain of near misses, only broken by a crash.
   combo: number
-  runCoins: number
-  runDiamonds: number
   // Leading edge of the wall, in world y. Only advanced on avalanche levels.
   avalancheY: number
   // The impact hold, in seconds, and the crash shake as a 0–1 strength. Both count down to zero.
@@ -183,8 +180,6 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     newBest: false,
     bestReach: 0,
     combo: 0,
-    runCoins: 0,
-    runDiamonds: 0,
     avalancheY: -AVALANCHE_LEAD_PX,
     freeze: 0,
     shake: 0,
@@ -248,8 +243,6 @@ export const resetRun = (state: GameState): void => {
   state.distanceScore = 0
   state.newBest = false
   state.combo = 0
-  state.runCoins = 0
-  state.runDiamonds = 0
   state.avalancheY = -AVALANCHE_LEAD_PX
   state.freeze = 0
   state.shake = 0
@@ -273,7 +266,6 @@ export const resetRun = (state: GameState): void => {
   state.sprayAccumulator = 0
 
   for (const tree of state.course.trees) tree.grazed = false
-  for (const collectible of state.course.collectibles) collectible.taken = false
   for (const rock of state.course.rocks) resetRock(rock)
   for (const hazard of state.course.hazards) resetHazard(hazard)
   for (const pickup of state.course.pickups) pickup.taken = false

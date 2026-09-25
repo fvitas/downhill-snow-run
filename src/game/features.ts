@@ -1,7 +1,7 @@
 import { crosserPath, GATE_POINTS, isKiller, JUMP, LOG, makeHazard, tailPx } from './hazards.ts'
 import { rngInt, rngPick, rngRange, type Rng } from './rng.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
-import { COIN_POINTS, type Collectible, type Hazard, type HazardKind, type Pickup, type PowerKind, type Tree } from './world.ts'
+import type { Hazard, HazardKind, Pickup, PowerKind, Tree } from './world.ts'
 
 const W = LOGICAL_WIDTH
 const CX = W / 2
@@ -43,7 +43,6 @@ const POINTS_PER_KILLER = 8
 export type Features = {
   hazards: Hazard[]
   pickups: Pickup[]
-  collectibles: Collectible[]
   // What a clean run through all of this adds to the perfect score.
   points: number
 }
@@ -178,19 +177,6 @@ const place = (rng: Rng, plan: Plan, kind: HazardKind, y: number, difficulty: nu
   }
 }
 
-// A short diagonal run of coins, the easy reward between two harder things.
-const coinLine = (rng: Rng, plan: Plan, y: number): void => {
-  const count = rngInt(rng, 5, 8)
-  let x = rngRange(rng, 110, 430)
-  const drift = rngRange(rng, -26, 26)
-  for (let i = 0; i < count; i += 1) {
-    plan.collectibles.push({ x, y: y + i * 48, kind: 'coin', taken: false })
-    plan.clearings.push({ x, y: y + i * 48, rx: 34, ry: 34 })
-    plan.points += COIN_POINTS
-    x = Math.min(W - 60, Math.max(60, x + drift))
-  }
-}
-
 const distanceToLane = (lane: Lane, x: number, y: number): number => {
   const dx = lane.bx - lane.ax
   const dy = lane.by - lane.ay
@@ -204,7 +190,7 @@ const blocked = (plan: Plan, tree: Tree): boolean =>
     ({ x, y, rx, ry }) => ((tree.x - x) / rx) ** 2 + ((tree.y - y) / ry) ** 2 < 1,
   ) || plan.lanes.some((lane) => distanceToLane(lane, tree.x, tree.y) < lane.r)
 
-// Obstacles, gives and power-ups for the stretch `from`–`end` of a tree level, and the trees
+// Obstacles and power-ups for the stretch `from`–`end` of a tree level, and the trees
 // cleared out of their way so each one is something you can see and read, not a coin flip.
 export const placeFeatures = (
   rng: Rng,
@@ -214,7 +200,7 @@ export const placeFeatures = (
   from: number,
   end: number,
 ): Features => {
-  const plan: Plan = { hazards: [], pickups: [], collectibles: [], points: 0, clearings: [], lanes: [] }
+  const plan: Plan = { hazards: [], pickups: [], points: 0, clearings: [], lanes: [] }
   const kinds = unlocked(KIND_FROM, levelIndex)
   const powers = unlocked(POWER_FROM, levelIndex)
   if (kinds.length === 0) return plan
@@ -231,8 +217,6 @@ export const placeFeatures = (
     const kind = slots.length === 0 && fresh && fits.includes(fresh) ? fresh : pickKind(rng, fits)
     slots.push(y)
     const reach = place(rng, plan, kind, y, difficulty)
-    // Every so often the gap after a slot is paid in coins.
-    if (rng() < 0.3) coinLine(rng, plan, y + reach + spacing * 0.35)
     y += reach + spacing * rngRange(rng, 0.8, 1.2)
   }
 
@@ -255,6 +239,5 @@ export const placeFeatures = (
 
   plan.hazards.sort((a, b) => a.homeY - b.homeY)
   plan.pickups.sort((a, b) => a.y - b.y)
-  plan.collectibles.sort((a, b) => a.y - b.y)
-  return { hazards: plan.hazards, pickups: plan.pickups, collectibles: plan.collectibles, points: plan.points }
+  return { hazards: plan.hazards, pickups: plan.pickups, points: plan.points }
 }

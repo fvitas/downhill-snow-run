@@ -1,12 +1,9 @@
 import { pickChunk, TREE_MARGIN, type ChunkTree } from './chunks.ts'
 import { placeFeatures } from './features.ts'
-import { createRng, hashSeed, rngInt, rngPick, rngRange, type Rng } from './rng.ts'
+import { createRng, hashSeed, rngInt, rngRange, type Rng } from './rng.ts'
 import {
-  COIN_POINTS,
-  DIAMOND_POINTS,
   METRES_PER_POINT,
   PIXELS_PER_METRE,
-  type Collectible,
   type Hazard,
   type Pickup,
   type Rock,
@@ -18,9 +15,7 @@ import { LOGICAL_WIDTH } from './viewport.ts'
 export const LEVELS_PER_WORLD = 50
 export const WORLD_COUNT = 10
 export const LEVEL_COUNT = LEVELS_PER_WORLD * WORLD_COUNT
-// Each world ends on a finale: odd worlds on the coin run — no trees, only the walls to avoid —
-// even worlds with the wall coming down the mountain after you.
-export const BONUS_EVERY = 50
+// Every even world ends with the wall coming down the mountain after you.
 export const AVALANCHE_EVERY = 100
 
 export type Level = {
@@ -28,7 +23,6 @@ export type Level = {
   world: number
   indexInWorld: number
   theme: Theme
-  bonus: boolean
   avalanche: boolean
   // The last level has no tape and no bar: the same downhill run as the other 499, it just never
   // ends. The slope is built a block at a time as you reach it.
@@ -68,29 +62,26 @@ export const levelAt = (rawIndex: number): Level => {
   const difficulty = difficultyOf(world, indexInWorld)
   const endless = index === LEVEL_COUNT
   const avalanche = !endless && index % AVALANCHE_EVERY === 0
-  const bonus = !endless && !avalanche && index % BONUS_EVERY === 0
 
   return {
     index,
     world,
     indexInWorld,
     theme: themeForWorld(world),
-    bonus,
     avalanche,
     endless,
     seed: hashSeed(index, SEED_SALT),
     difficulty,
-    distanceM: bonus ? 500 : Math.round(lerp(400, 900, difficulty) / 10) * 10,
+    distanceM: Math.round(lerp(400, 900, difficulty) / 10) * 10,
     minGapPx: lerp(115, 58, difficulty),
-    baseSpeed: bonus ? 330 : lerp(205, 320, difficulty),
-    maxSpeed: bonus ? 520 : lerp(470, 880, difficulty),
-    speedRampPer1000: bonus ? 4 : lerp(6, 14, difficulty),
+    baseSpeed: lerp(205, 320, difficulty),
+    maxSpeed: lerp(470, 880, difficulty),
+    speedRampPer1000: lerp(6, 14, difficulty),
   }
 }
 
 export type Course = {
   trees: Tree[]
-  collectibles: Collectible[]
   rocks: Rock[]
   hazards: Hazard[]
   pickups: Pickup[]
@@ -208,114 +199,6 @@ const fillTrees = (rng: Rng, level: Level, from: number, end: number): Tree[] =>
   return trees.sort((a, b) => a.y - b.y)
 }
 
-const COIN_EDGE = 46
-const CENTRE_X = LOGICAL_WIDTH / 2
-
-const clampCoinX = (x: number): number =>
-  Math.min(LOGICAL_WIDTH - COIN_EDGE, Math.max(COIN_EDGE, x))
-
-// Every placement is nudged off its ideal spot so the shapes read as scattered, not drawn.
-const COIN_JITTER_X = 14
-const COIN_JITTER_Y = 10
-
-const putCoin = (rng: Rng, out: Collectible[], x: number, y: number): void => {
-  out.push({
-    x: clampCoinX(x + rngRange(rng, -COIN_JITTER_X, COIN_JITTER_X)),
-    y: y + rngRange(rng, -COIN_JITTER_Y, COIN_JITTER_Y),
-    kind: 'coin',
-    taken: false,
-  })
-}
-
-const putDiamond = (rng: Rng, out: Collectible[], x: number, y: number): void => {
-  out.push({
-    x: clampCoinX(x + rngRange(rng, -COIN_JITTER_X, COIN_JITTER_X)),
-    y: y + rngRange(rng, -COIN_JITTER_Y, COIN_JITTER_Y),
-    kind: 'diamond',
-    taken: false,
-  })
-}
-
-type CoinSegment = (rng: Rng, out: Collectible[], top: number, length: number) => void
-
-// A wandering lane: each row drifts a random amount, sometimes skips, sometimes doubles up.
-// The drift per row stays under what the ball can carve, so everything is still reachable.
-const coinScatter: CoinSegment = (rng, out, top, length) => {
-  let x = rngRange(rng, COIN_EDGE + 40, LOGICAL_WIDTH - COIN_EDGE - 40)
-  let drift = 0
-  for (let y = top; y < top + length; y += rngRange(rng, 40, 90)) {
-    drift = drift * 0.5 + rngRange(rng, -75, 75)
-    x = clampCoinX(x + drift)
-    if (x <= COIN_EDGE || x >= LOGICAL_WIDTH - COIN_EDGE) drift = -drift
-    const roll = rng()
-    if (roll < 0.15) continue
-    if (roll < 0.25) {
-      putDiamond(rng, out, x + rngRange(rng, -120, 120), y)
-      continue
-    }
-    putCoin(rng, out, x, y)
-    if (roll > 0.8) putCoin(rng, out, x + rngRange(rng, -60, 60), y + rngRange(rng, 10, 30))
-  }
-}
-
-// A sweeping line you ride, with the odd diamond parked across the slope from its peak.
-const coinWave: CoinSegment = (rng, out, top, length) => {
-  const amplitude = rngRange(rng, 80, 200)
-  const period = rngRange(rng, 300, 640)
-  const phase = rngRange(rng, 0, Math.PI * 2)
-  const spacing = rngRange(rng, 46, 70)
-  for (let y = top; y < top + length; y += spacing) {
-    const wave = Math.sin(phase + y / period)
-    putCoin(rng, out, CENTRE_X + wave * amplitude, y)
-    if (Math.abs(wave) > 0.95 && rng() < 0.6) {
-      putDiamond(rng, out, CENTRE_X - Math.sign(wave) * (CENTRE_X - COIN_EDGE), y)
-    }
-  }
-}
-
-// A pocket: rings of coins around a diamond, far enough off the line to be a choice.
-const coinCluster: CoinSegment = (rng, out, top, length) => {
-  const pockets = rngInt(rng, 1, 3)
-  for (let i = 0; i < pockets; i += 1) {
-    const centreX = rngRange(rng, COIN_EDGE + 40, LOGICAL_WIDTH - COIN_EDGE - 40)
-    const centreY = top + (length * (i + 0.5)) / pockets + rngRange(rng, -60, 60)
-    const count = rngInt(rng, 7, 11)
-    for (let k = 0; k < count; k += 1) {
-      const angle = rngRange(rng, 0, Math.PI * 2)
-      const radius = rngRange(rng, 36, 96)
-      putCoin(rng, out, centreX + Math.cos(angle) * radius, centreY + Math.sin(angle) * radius * 1.4)
-    }
-    putDiamond(rng, out, centreX, centreY)
-  }
-}
-
-// Scatter carries most of a run; the drawn shapes only turn up now and then as a change of pace.
-const COIN_SEGMENTS: readonly CoinSegment[] = [
-  coinScatter,
-  coinScatter,
-  coinScatter,
-  coinScatter,
-  coinWave,
-  coinCluster,
-]
-
-// Bonus runs are stitched from segments, so no two coin levels read as the same wave.
-const buildCoinCourse = (level: Level, lengthPx: number): Collectible[] => {
-  const rng = createRng(level.seed ^ 0x9e37)
-  const collectibles: Collectible[] = []
-  const end = slopeEndPx(lengthPx)
-  let cursor = RUN_IN_PX
-
-  while (cursor < end) {
-    const segment = rngPick(rng, COIN_SEGMENTS)
-    const length = Math.min(rngRange(rng, 420, 820), end - cursor)
-    segment(rng, collectibles, cursor, length)
-    cursor += length + rngRange(rng, 70, 170)
-  }
-
-  return collectibles.sort((a, b) => a.y - b.y)
-}
-
 // Rocks arrive once the slope is busy enough to be read at a glance, and only on tree levels.
 export const ROCKS_FROM_DIFFICULTY = 0.22
 const ROCK_SPACING = 1_400
@@ -380,15 +263,6 @@ const buildStretch = (level: Level, seed: number, from: number, end: number): St
 
 export const buildCourse = (level: Level): Course => {
   const lengthPx = level.endless ? ENDLESS_BLOCK_PX : level.distanceM * PIXELS_PER_METRE
-  if (level.bonus) {
-    const collectibles = buildCoinCourse(level, lengthPx)
-    const pickups = collectibles.reduce(
-      (sum, item) => sum + (item.kind === 'diamond' ? DIAMOND_POINTS : COIN_POINTS),
-      0,
-    )
-    const perfectScore = pickups + Math.round(level.distanceM / METRES_PER_POINT)
-    return { trees: [], collectibles, rocks: [], hazards: [], pickups: [], lengthPx, perfectScore }
-  }
   if (level.endless) {
     const { points: _points, ...stretch } = buildStretch(level, level.seed, RUN_IN_PX, lengthPx)
     return { ...stretch, lengthPx, perfectScore: 0 }
@@ -420,24 +294,20 @@ export const extendCourse = (level: Level, course: Course, y: number): void => {
   course.rocks.push(...stretch.rocks)
   course.hazards.push(...stretch.hazards)
   course.pickups.push(...stretch.pickups)
-  course.collectibles.push(...stretch.collectibles)
   course.lengthPx = end
 }
 
 export const RATINGS = ['Made it!', 'Good run!', 'Great run!', 'Epic run!', 'Insane run!', 'Legendary run!'] as const
 export type Rating = (typeof RATINGS)[number]
 
-// Fractions of the perfect score for each rating above the first. The coin run's cuts sit
-// lower: a few missed coins should not cost the top rating.
+// Fractions of the perfect score for each rating above the first.
 const RUN_CUTS = [0.12, 0.27, 0.45, 0.62, 0.8]
-const BONUS_CUTS = [0.1, 0.22, 0.38, 0.54, 0.7]
 // At full difficulty every cut sits this much lower: just finishing there is worth shouting about.
 const HARD_EASING = 0.4
 
 export const rateRun = (level: Level, score: number, perfectScore: number): Rating | null => {
   if (perfectScore <= 0) return null
   const ease = 1 - HARD_EASING * level.difficulty
-  const cuts = level.bonus ? BONUS_CUTS : RUN_CUTS
-  const tier = cuts.filter((cut) => score >= perfectScore * cut * ease).length
+  const tier = RUN_CUTS.filter((cut) => score >= perfectScore * cut * ease).length
   return RATINGS[tier] ?? null
 }

@@ -1,14 +1,12 @@
 import { avalancheCaught } from './avalanche.ts'
 import { checkHazards } from './hazards.ts'
 import { burst } from './particles.ts'
-import { award, kill, nearMiss, phasing, treeHitExtents, trySave, untouchable } from './scoring.ts'
+import { kill, nearMiss, phasing, treeHitExtents, trySave, untouchable } from './scoring.ts'
 import type { GameState, Rock, Tree } from './state.ts'
 import { ballXAt, distanceToStepSq } from './sweep.ts'
 import { LOGICAL_WIDTH } from './viewport.ts'
-import { COIN_POINTS, DIAMOND_POINTS } from './world.ts'
 
 const SCAN_WINDOW = 120
-const COIN_RADIUS = 30
 // A rock this close to the ball's edge counts as a near miss once the ball pulls clear of it.
 const ROCK_NEAR_PX = 60
 
@@ -20,20 +18,6 @@ const graze = (state: GameState, tree: Tree, ballX: number): void => {
   nearMiss(state, tree.x, tree.y - 24)
   state.wobbles.push({ tree, age: 0, side: tree.x < ballX ? -1 : 1 })
   burst(state, tree.x, tree.y - tree.radius * 0.4, 6)
-}
-
-const collect = (state: GameState): void => {
-  for (const item of state.course.collectibles) {
-    if (item.taken) continue
-    if (item.y <= state.prevY || item.y > state.y) continue
-    if (Math.abs(item.x - ballXAt(state, item.y)) > COIN_RADIUS) continue
-
-    item.taken = true
-    const diamond = item.kind === 'diamond'
-    if (diamond) state.runDiamonds += 1
-    else state.runCoins += 1
-    award(state, diamond ? DIAMOND_POINTS : COIN_POINTS, item.x, item.y - 20)
-  }
 }
 
 const checkRocks = (state: GameState): void => {
@@ -103,7 +87,6 @@ const checkTrees = (state: GameState): void => {
 export const checkCollisions = (state: GameState): void => {
   if (state.dead) return
 
-  collect(state)
 
   // Neither the helmet nor a ghost does anything for the wall or the avalanche.
   if (avalancheCaught(state)) {

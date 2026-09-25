@@ -145,8 +145,6 @@ export const createGame = (mount: GameMount): Game => {
     const { index } = state.level
     state.newBest = clearedBefore(progress, index) && state.score > state.bestScore
     progress = recordRun(progress, index, state.score)
-    progress.coins += state.runCoins
-    progress.diamonds += state.runDiamonds
     if (persist) saveProgress(progress)
   }
 

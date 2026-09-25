@@ -10,13 +10,11 @@ export type LevelRecord = { score: number; reach: number }
 
 export type Progress = {
   levels: Record<number, LevelRecord>
-  coins: number
-  diamonds: number
   // Highest level the player may enter. Levels unlock one at a time, in order.
   unlocked: number
 }
 
-const empty = (): Progress => ({ levels: {}, coins: 0, diamonds: 0, unlocked: 1 })
+const empty = (): Progress => ({ levels: {}, unlocked: 1 })
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -44,8 +42,6 @@ export const loadProgress = (): Progress => {
 
     return {
       levels,
-      coins: Math.max(0, Math.round(numberOr(parsed.coins, 0))),
-      diamonds: Math.max(0, Math.round(numberOr(parsed.diamonds, 0))),
       unlocked: Math.min(LEVEL_COUNT, Math.max(1, Math.round(numberOr(parsed.unlocked, 1)))),
     }
   } catch {

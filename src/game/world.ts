@@ -11,16 +11,6 @@ export type Tree = {
   grazed: boolean
 }
 
-export const COIN_POINTS = 5
-export const DIAMOND_POINTS = 50
-
-export type Collectible = {
-  x: number
-  y: number
-  kind: 'coin' | 'diamond'
-  taken: boolean
-}
-
 // Crosses the slope and tumbles downhill slower than the ball, so you close on it from behind.
 // The spawn fields are the seeded ones; x/y/vx/angle are live and reset with the run.
 export type Rock = {
@@ -70,7 +60,7 @@ export type Shot = { fromX: number; fromY: number; x: number; y: number; age: nu
 // The trail a wolf or fox leaves in the snow.
 export type Print = { x: number; y: number; heading: number; left: boolean }
 
-// Everything on the slope that is not a pine, a coin or a rolling rock. The home fields are
+// Everything on the slope that is not a pine or a rolling rock. The home fields are
 // seeded; the rest are live and reset with the run.
 export type Hazard = {
   kind: HazardKind

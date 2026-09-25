@@ -59,48 +59,6 @@ const drawTreeAt = (
   ctx.restore()
 }
 
-const COIN_RADIUS = 11
-const COIN_FILL = '#f7c948'
-const COIN_EDGE = '#c9971f'
-const DIAMOND_FILL = '#6fd3e8'
-const DIAMOND_EDGE = '#2f93ad'
-
-const drawCollectibles = (
-  ctx: CanvasRenderingContext2D,
-  state: GameState,
-  camY: number,
-): void => {
-  for (const item of state.course.collectibles) {
-    if (item.taken) continue
-    const screenY = item.y - camY
-    if (screenY < -30 || screenY > viewHeight() + 30) continue
-
-    if (item.kind === 'coin') {
-      ctx.fillStyle = COIN_FILL
-      ctx.strokeStyle = COIN_EDGE
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      // Squashed across, so a row of them reads as spinning discs lying on the snow.
-      ctx.ellipse(item.x, screenY, COIN_RADIUS * 0.72, COIN_RADIUS, 0, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.stroke()
-      continue
-    }
-
-    ctx.fillStyle = DIAMOND_FILL
-    ctx.strokeStyle = DIAMOND_EDGE
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.moveTo(item.x, screenY - COIN_RADIUS * 1.2)
-    ctx.lineTo(item.x + COIN_RADIUS, screenY)
-    ctx.lineTo(item.x, screenY + COIN_RADIUS * 1.2)
-    ctx.lineTo(item.x - COIN_RADIUS, screenY)
-    ctx.closePath()
-    ctx.fill()
-    ctx.stroke()
-  }
-}
-
 const AVALANCHE_BODY = '#e8eef4'
 const AVALANCHE_EDGE = '#c3d0dd'
 const AVALANCHE_DUST = 'rgba(255, 255, 255, 0.75)'
@@ -364,7 +322,6 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   for (const hazard of hazards) drawHazardUnder(ctx, state, hazard, camY)
   drawFinish(ctx, state, camY)
   drawTrail(ctx, state, camY)
-  drawCollectibles(ctx, state, camY)
   drawParticles(ctx, state, camY, 'spray')
 
   const visible = visibleTrees(state)
