@@ -6,7 +6,7 @@ import { clearBadHits, clearTuning, loadBadHits, saveTuning } from '../game/stor
 // touch-auto undoes the body's touch-none — without it range inputs can't be dragged on mobile.
 const PANEL_CLASSES =
   'absolute inset-x-0 bottom-0 max-h-[70vh] touch-auto overflow-y-auto bg-slate-900/95 ' +
-  'text-slate-100 px-4 pt-3 text-xs pb-[calc(env(safe-area-inset-bottom)+1rem)] hidden'
+  'text-slate-100 px-4 pt-3 text-xs pb-[calc(env(safe-area-inset-bottom)+4rem)] hidden'
 
 const BUTTON_CLASSES = 'rounded bg-slate-700 px-3 py-1.5 text-xs font-medium active:bg-slate-600'
 
@@ -22,15 +22,16 @@ export const createTuningPanel = (state: GameState): TuningPanel => {
   const toggle = document.createElement('button')
   toggle.type = 'button'
   toggle.textContent = '⚙'
+  // Bottom-left corner: the top belongs to the level bar and the map's total pill. z-10 keeps the
+  // cog above the panel, which opens over this corner, so it can close it again.
   toggle.className =
-    'pointer-events-auto absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] ' +
-    'size-10 touch-auto rounded-full bg-slate-900/70 text-lg text-white'
+    'pointer-events-auto absolute left-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] ' +
+    'z-10 size-10 touch-auto rounded-full bg-slate-900/70 text-lg text-white'
   toggle.dataset.ui = ''
 
   const readout = document.createElement('div')
   readout.className =
-    // Bottom corner: the top of the screen belongs to the level bar now.
-    'pointer-events-none absolute left-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] ' +
+    'pointer-events-none absolute left-3 bottom-[calc(env(safe-area-inset-bottom)+3.75rem)] ' +
     'rounded bg-slate-900/70 px-2 py-1 font-mono text-[11px] text-white'
 
   const panel = document.createElement('div')

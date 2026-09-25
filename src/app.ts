@@ -90,7 +90,7 @@ export const createGame = (mount: GameMount): Game => {
     state.screen = 'map'
     state.paused = false
     inspector.close()
-    map.show(progress, state.level.index)
+    map.show(progress, state.level.index, hud.scoreAnchor?.())
   }
 
   const play = (levelIndex: number): void => {

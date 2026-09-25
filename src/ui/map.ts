@@ -1,12 +1,17 @@
 import { createElement, LockKeyhole } from 'lucide'
+import 'number-flow'
 import { LEVEL_COUNT, LEVELS_PER_WORLD, levelAt, type Level } from '../game/levels.ts'
 import { recordOf, totalScore, type Progress } from '../game/progress.ts'
 import { NIGHT_WORLD, PROP_SLUGS, WORLDS, worldName } from '../game/worlds.ts'
+import { flyNumber, punch, reducedMotion } from './fly.ts'
+import type { ScoreAnchor } from './hud.ts'
 import { bakePlate, PLATE_H, PLATE_W, rowAt, SPLIT, type Plate } from './plate.ts'
+import { formatPoints, POINTS_LOCALE } from './points.ts'
 
 export type LevelMap = {
   root: HTMLElement
-  show: (progress: Progress, focusLevel: number) => void
+  // `from` is the finish card's score: when the total grew, the gain flies off it into the pill.
+  show: (progress: Progress, focusLevel: number, from?: ScoreAnchor | null) => void
   hide: () => void
   redraw: () => void
 }
@@ -115,16 +120,18 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
   const hudSub = div('text-[0.7rem] font-semibold tracking-[0.04em] opacity-70')
   who.append(hudWorld, hudSub)
 
-  const total = div(
+  const totalPill = div(
     'flex shrink-0 items-baseline gap-1.5 rounded-full bg-white/[0.16] px-3 py-1.5 ' +
       'font-extrabold backdrop-blur-md',
   )
-  const totalValue = div('text-[0.8rem] tabular-nums')
+  const totalValue = document.createElement('number-flow')
+  totalValue.className = 'text-[0.8rem] tabular-nums'
+  totalValue.locales = POINTS_LOCALE
   const totalLabel = div('text-[0.6rem] uppercase tracking-[0.08em] opacity-70')
   totalLabel.textContent = 'total'
-  total.append(totalValue, totalLabel)
+  totalPill.append(totalValue, totalLabel)
 
-  hud.append(who, total)
+  hud.append(who, totalPill)
 
   // Once the current level scrolls out of view, a pill at the bottom says where it went.
   const jump = document.createElement('button')
@@ -483,7 +490,29 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     hudWorld.textContent = worldName(world)
     const first = (world - 1) * LEVELS_PER_WORLD + 1
     hudSub.textContent = `levels ${first} – ${first + LEVELS_PER_WORLD - 1}`
-    totalValue.textContent = String(progress ? totalScore(progress) : 0)
+  }
+
+  // What the pill last displayed, so a total that grew off-screen still rolls up on the next show.
+  let shownTotal = 0
+
+  const syncTotal = (from: ScoreAnchor | null | undefined): void => {
+    const total = progress ? totalScore(progress) : 0
+    const gain = total - shownTotal
+    const settle = (): void => {
+      shownTotal = total
+      totalValue.update(total)
+    }
+    if (gain <= 0 || !from || reducedMotion()) return settle()
+    flyNumber({
+      text: `+${formatPoints(gain)}`,
+      color: from.color,
+      from: from.rect,
+      to: totalPill.getBoundingClientRect(),
+      onHit: () => {
+        punch(totalPill)
+        settle()
+      },
+    })
   }
 
   const syncJump = (): void => {
@@ -582,10 +611,11 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
   return {
     root,
     redraw,
-    show: (next, focusLevel) => {
+    show: (next, focusLevel, from) => {
       progress = next
       current = Math.max(1, Math.min(LEVEL_COUNT, next.unlocked))
       root.style.display = 'flex'
+      syncTotal(from)
       if (!head || !body) {
         pendingFocus = focusLevel
         return

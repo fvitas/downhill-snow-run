@@ -7,6 +7,7 @@ import {
 } from '../game/state.ts'
 import { UI_THEME } from '../game/themes.ts'
 import { applyGlass, applySolid, GLASS, PRESS, isDarkTheme, withAlpha } from './glass.ts'
+import { formatPoints } from './points.ts'
 
 export type HudActions = {
   onRetry: () => void
@@ -16,9 +17,13 @@ export type HudActions = {
   onPause: () => void
 }
 
+// Where the finish card's score sits on screen, so the map can fly the points off it.
+export type ScoreAnchor = { rect: DOMRect; color: string }
+
 export type Hud = {
   root: HTMLElement
   update: () => void
+  scoreAnchor?: () => ScoreAnchor | null
 }
 
 const PRAISE = [
@@ -257,6 +262,10 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
   return {
     root,
+    scoreAnchor: () =>
+      card.style.display === 'none'
+        ? null
+        : { rect: finalScore.getBoundingClientRect(), color: UI_THEME.ball },
     update: () => {
       const { level } = state
       // Fixed chrome: every panel, chip and button stays on world one's palette. Only the two
@@ -326,7 +335,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
         liveBadge.style.left = `${headXAt(progress, badgeRow)}px`
       }
 
-      scoreLine.textContent = String(state.score)
+      scoreLine.textContent = formatPoints(state.score)
       scoreLine.style.color = world.ball
       scoreLine.style.textShadow = `0 2px 10px ${withAlpha(world.ball, 0.22)}`
 
@@ -379,7 +388,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       sheet.style.color = theme.ink
       const crashTitle = state.lastHit?.kind === 'avalanche' ? 'CAUGHT' : 'CRASHED'
       title.textContent = state.finished ? (level.bonus ? 'COLLECTED' : 'FINISH') : crashTitle
-      finalScore.textContent = String(state.score)
+      finalScore.textContent = formatPoints(state.score)
       finalScore.style.color = theme.ball
       finalScore.style.textShadow = `0 2px 10px ${withAlpha(theme.ball, 0.2)}`
       applySolid(primary, theme.ink, theme.snow)
@@ -402,7 +411,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       const best = state.finished ? Math.max(state.bestScore, state.score) : state.bestScore
       detail.textContent = level.bonus && state.finished
         ? `${state.runCoins} coins · ${state.runDiamonds} diamonds`
-        : `Best: ${best}`
+        : `Best: ${formatPoints(best)}`
     },
   }
 }
