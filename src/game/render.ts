@@ -115,8 +115,8 @@ const drawRocks = (ctx: CanvasRenderingContext2D, state: GameState, camY: number
   }
 }
 
-const FINISH_CHECK = '#3f4a5a'
-const FINISH_TAPE = '#efe9db'
+const FINISH_CHECK = '#1d232b'
+const FINISH_TAPE = '#ffffff'
 const FINISH_SQUARE = 12
 const FINISH_ROWS = 2
 
