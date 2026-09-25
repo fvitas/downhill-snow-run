@@ -224,7 +224,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   buttons.className = 'mt-5 flex w-full flex-col items-stretch gap-2'
 
   const primary = button(
-    'Retry',
+    'Let’s go again',
     `${PRESS} relative rounded-2xl border px-4 py-3.5 text-base font-bold`,
     () => {
       if (state.finished) actions.onNext()
@@ -390,7 +390,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       finalScore.style.color = theme.ball
       finalScore.style.textShadow = `0 2px 10px ${withAlpha(theme.ball, 0.2)}`
       applySolid(primary, theme.ink, theme.snow)
-      primary.textContent = state.finished ? 'Next level' : 'Retry'
+      primary.textContent = state.finished ? 'Next level' : 'Let’s go again'
       crashSite.style.background = theme.snow
       crashSite.style.borderColor = 'transparent'
       crashSite.style.color = theme.ink
