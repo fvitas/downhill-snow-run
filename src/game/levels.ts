@@ -461,17 +461,20 @@ export const extendCourse = (level: Level, course: Course, y: number): void => {
   course.lengthPx = end
 }
 
-export const RATINGS = ['Made it', 'Good run', 'Great run', 'Perfect line'] as const
+export const RATINGS = ['Made it!', 'Good run!', 'Great run!', 'Epic run!', 'Insane run!', 'Legendary run!'] as const
 export type Rating = (typeof RATINGS)[number]
 
-// Fractions of the perfect score for the second, third and top rating. The coin run's cuts sit
+// Fractions of the perfect score for each rating above the first. The coin run's cuts sit
 // lower: a few missed coins should not cost the top rating.
-const RUN_CUTS = [0.25, 0.55, 0.8]
-const BONUS_CUTS = [0.2, 0.45, 0.7]
+const RUN_CUTS = [0.12, 0.27, 0.45, 0.62, 0.8]
+const BONUS_CUTS = [0.1, 0.22, 0.38, 0.54, 0.7]
+// At full difficulty every cut sits this much lower: just finishing there is worth shouting about.
+const HARD_EASING = 0.4
 
 export const rateRun = (level: Level, score: number, perfectScore: number): Rating | null => {
   if (perfectScore <= 0) return null
+  const ease = 1 - HARD_EASING * level.difficulty
   const cuts = level.bonus ? BONUS_CUTS : RUN_CUTS
-  const tier = cuts.filter((cut) => score >= perfectScore * cut).length
+  const tier = cuts.filter((cut) => score >= perfectScore * cut * ease).length
   return RATINGS[tier] ?? null
 }
