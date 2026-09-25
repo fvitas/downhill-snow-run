@@ -1,4 +1,3 @@
-import { pushAvalanche } from './avalanche.ts'
 import { burst } from './particles.ts'
 import type { GameState, HitRecord, PopTone } from './state.ts'
 import { TRUNK_HALF_SCALE, type Tree } from './world.ts'
@@ -31,7 +30,6 @@ export const award = (state: GameState, points: number, x: number, y: number): v
 export const nearMiss = (state: GameState, x: number, y: number): void => {
   state.combo += 1
   award(state, comboPoints(state.combo), x, y)
-  pushAvalanche(state, state.combo)
 }
 
 // Soft things cost points and the chain, never the run.

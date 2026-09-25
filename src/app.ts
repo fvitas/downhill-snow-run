@@ -1,5 +1,4 @@
 import { DEFAULT_PRESET } from './game/config.ts'
-import { stepAvalanche } from './game/avalanche.ts'
 import { checkCollisions } from './game/collision.ts'
 import { stepHazards, stepPowers } from './game/hazards.ts'
 import { attachInput } from './game/input.ts'
@@ -171,11 +170,10 @@ export const createGame = (mount: GameMount): Game => {
     scoreDistance(state)
     extendCourse(state.level, state.course, state.y)
     stepRocks(state, dt)
-    stepAvalanche(state, dt)
     stepHazards(state, dt)
     stepPowers(state, dt)
     state.elapsed += dt
-    // Past the tape nothing can touch you — not a stray trunk, not the wall.
+    // Past the tape nothing can touch you, not even a stray trunk.
     if (state.coast <= 0) checkCollisions(state)
     stepFinish(state, dt)
     if (state.dead && !reachSaved) saveReach()

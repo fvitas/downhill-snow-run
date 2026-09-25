@@ -1,4 +1,3 @@
-import { avalancheCaught } from './avalanche.ts'
 import { checkHazards } from './hazards.ts'
 import { burst } from './particles.ts'
 import { kill, nearMiss, phasing, treeHitExtents, trySave, untouchable } from './scoring.ts'
@@ -87,13 +86,7 @@ const checkTrees = (state: GameState): void => {
 export const checkCollisions = (state: GameState): void => {
   if (state.dead) return
 
-
-  // Neither the helmet nor a ghost does anything for the wall or the avalanche.
-  if (avalancheCaught(state)) {
-    kill(state, 'avalanche', null)
-    return
-  }
-
+  // Neither the helmet nor a ghost does anything for the wall.
   const r = state.tuning.ballRadius
   if (state.x <= r || state.x >= LOGICAL_WIDTH - r) {
     kill(state, 'wall', null)

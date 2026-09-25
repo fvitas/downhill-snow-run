@@ -1,6 +1,5 @@
 import type { TuningConfig } from './config.ts'
 import { buildCourse, levelAt, type Course, type Level } from './levels.ts'
-import { AVALANCHE_LEAD_PX } from './avalanche.ts'
 import { resetHazard } from './hazards.ts'
 import { resetRock } from './rocks.ts'
 import type { Theme } from './themes.ts'
@@ -46,7 +45,7 @@ export type Wobble = { tree: Tree; age: number; side: 1 | -1 }
 
 // Everything needed to re-judge a crash after the fact, and to draw it magnified.
 export type HitRecord = {
-  kind: 'tree' | 'wall' | 'rock' | 'avalanche' | HazardKind
+  kind: 'tree' | 'wall' | 'rock' | HazardKind
   score: number
   speed: number
   angleDeg: number
@@ -92,8 +91,6 @@ export type GameState = {
   bestReach: number
   // A chain of near misses, only broken by a crash.
   combo: number
-  // Leading edge of the wall, in world y. Only advanced on avalanche levels.
-  avalancheY: number
   // The impact hold, in seconds, and the crash shake as a 0–1 strength. Both count down to zero.
   freeze: number
   shake: number
@@ -180,7 +177,6 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     newBest: false,
     bestReach: 0,
     combo: 0,
-    avalancheY: -AVALANCHE_LEAD_PX,
     freeze: 0,
     shake: 0,
     helmet: false,
@@ -243,7 +239,6 @@ export const resetRun = (state: GameState): void => {
   state.distanceScore = 0
   state.newBest = false
   state.combo = 0
-  state.avalancheY = -AVALANCHE_LEAD_PX
   state.freeze = 0
   state.shake = 0
   state.helmet = false

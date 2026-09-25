@@ -15,15 +15,11 @@ import { LOGICAL_WIDTH } from './viewport.ts'
 export const LEVELS_PER_WORLD = 50
 export const WORLD_COUNT = 10
 export const LEVEL_COUNT = LEVELS_PER_WORLD * WORLD_COUNT
-// Every even world ends with the wall coming down the mountain after you.
-export const AVALANCHE_EVERY = 100
-
 export type Level = {
   index: number
   world: number
   indexInWorld: number
   theme: Theme
-  avalanche: boolean
   // The last level has no tape and no bar: the same downhill run as the other 499, it just never
   // ends. The slope is built a block at a time as you reach it.
   endless: boolean
@@ -61,14 +57,12 @@ export const levelAt = (rawIndex: number): Level => {
   const indexInWorld = index - (world - 1) * LEVELS_PER_WORLD
   const difficulty = difficultyOf(world, indexInWorld)
   const endless = index === LEVEL_COUNT
-  const avalanche = !endless && index % AVALANCHE_EVERY === 0
 
   return {
     index,
     world,
     indexInWorld,
     theme: themeForWorld(world),
-    avalanche,
     endless,
     seed: hashSeed(index, SEED_SALT),
     difficulty,

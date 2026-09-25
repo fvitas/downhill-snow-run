@@ -384,8 +384,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
       applyGlass(sheet, theme, { alpha: dark ? 0.72 : 0.82, elevated: true })
       sheet.style.color = theme.ink
-      const crashTitle = state.lastHit?.kind === 'avalanche' ? 'CAUGHT' : 'CRASHED'
-      title.textContent = state.finished ? 'FINISH' : crashTitle
+      title.textContent = state.finished ? 'FINISH' : 'CRASHED'
       finalScore.textContent = formatPoints(state.score)
       finalScore.style.color = theme.ball
       finalScore.style.textShadow = `0 2px 10px ${withAlpha(theme.ball, 0.2)}`

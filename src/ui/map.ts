@@ -1,6 +1,6 @@
 import { createElement, LockKeyhole } from 'lucide'
 import 'number-flow'
-import { LEVEL_COUNT, LEVELS_PER_WORLD, levelAt, type Level } from '../game/levels.ts'
+import { LEVEL_COUNT, LEVELS_PER_WORLD, levelAt } from '../game/levels.ts'
 import { recordOf, totalScore, type Progress } from '../game/progress.ts'
 import { NIGHT_WORLD, PROP_SLUGS, WORLDS, worldName } from '../game/worlds.ts'
 import { flyNumber, punch, reducedMotion } from './fly.ts'
@@ -288,7 +288,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     'border-[3px] border-white text-[1.2rem] font-extrabold text-white ' +
     'shadow-[0_6px_14px_rgba(13,43,62,0.34)]'
 
-  const paintNode = (node: HTMLElement, state: 'done' | 'now' | 'lock', level: Level): void => {
+  const paintNode = (node: HTMLElement, state: 'done' | 'now' | 'lock'): void => {
     if (state === 'lock') {
       node.style.background = 'rgba(255, 255, 255, .58)'
       node.style.color = '#5e7f9a'
@@ -310,10 +310,6 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     }
     node.style.color = '#5a2f00'
     node.style.background = 'linear-gradient(180deg, #ffc247, #f79320)'
-    if (level.avalanche) {
-      node.style.background = 'linear-gradient(180deg, #ff8f6b, #e8442f)'
-      node.style.color = '#fff'
-    }
   }
 
   const makeSlot = (i: number): HTMLElement => {
@@ -339,7 +335,7 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     node.className = `${NODE_BASE} pointer-events-auto`
     if (locked) node.append(createElement(LockKeyhole, { width: 22, height: 22, 'stroke-width': 2.5 }))
     else node.textContent = String(index)
-    paintNode(node, state, level)
+    paintNode(node, state)
     if (!locked) node.addEventListener('click', () => onPlay(index))
     slot.append(node)
 
