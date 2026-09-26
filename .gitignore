@@ -5,3 +5,4 @@ docs/
 .playwright-mcp/
 .DS_Store
 *.log
+.idea/
