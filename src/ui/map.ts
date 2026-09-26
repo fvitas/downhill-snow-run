@@ -1,3 +1,4 @@
+import { SplashScreen } from '@capacitor/splash-screen'
 import { createElement, LockKeyhole } from 'lucide'
 import 'number-flow'
 import { LEVEL_COUNT, LEVELS_PER_WORLD, levelAt } from '../game/levels.ts'
@@ -45,6 +46,11 @@ const div = (className: string, style?: Partial<CSSStyleDeclaration>): HTMLDivEl
   if (style) Object.assign(element.style, style)
   return element
 }
+
+const REVEAL_MS = 700
+// From the centre, the circle reaches the corners at 70.7% of the clip-path reference radius.
+const IRIS_SHUT = 'circle(0% at 50% 50%)'
+const IRIS_OPEN = 'circle(71% at 50% 50%)'
 
 const loadProps = async (slug: string): Promise<PropPlacement[]> => {
   const response = await fetch(`/map/props/props-${slug}.json`)
@@ -148,10 +154,10 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     '<path d="M2 12h3" /><path d="M19 12h3" /><path d="M12 2v3" /><path d="M12 19v3" />' +
     '<circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="3" /></svg>Next run'
 
-  // Plain sky until the plate and props are in: the app background is the same blue.
-  const booting = div('absolute inset-0 z-20 bg-[#0a4478]')
+  // Shut until the plate and props are in, so only the blue app background (the splash colour) shows.
+  stage.style.clipPath = IRIS_SHUT
 
-  stage.append(scroller, hud, jump, booting)
+  stage.append(scroller, hud, jump)
   root.append(stage)
 
   let head: Plate | null = null
@@ -568,7 +574,15 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
       pendingFocus = 0
       onScroll()
     }
-    booting.remove()
+    // Blue on blue, so the splash can drop at once and hand straight over to the iris.
+    void SplashScreen.hide({ fadeOutDuration: 0 })
+    stage.style.clipPath = ''
+    if (!reducedMotion()) {
+      stage.animate([{ clipPath: IRIS_SHUT }, { clipPath: IRIS_OPEN }], {
+        duration: REVEAL_MS,
+        easing: 'cubic-bezier(0.32, 0, 0.67, 0)',
+      })
+    }
   }
 
   void boot()

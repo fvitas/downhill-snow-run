@@ -17,6 +17,17 @@ const config: CapacitorConfig = {
     backgroundColor: '#0a4478',
   },
   plugins: {
+    // The map hides the splash as soon as it is built and opens an iris onto itself. The duration
+    // only caps a load that stalls.
+    SplashScreen: {
+      launchShowDuration: 3_000,
+      launchAutoHide: true,
+      // Android's launch splash ignores the fade passed to hide(). This short one melts the icon
+      // away while the iris is already opening under it.
+      launchFadeOutDuration: 200,
+      backgroundColor: '#0a4478',
+      showSpinner: false,
+    },
     // iOS hides the status bar (Info.plist), so Android hides both bars to match. Old WebViews
     // (< 140) can't read env(safe-area-inset-*), and hidden bars leave only the cutout to inset.
     SystemBars: {
