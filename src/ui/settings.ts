@@ -8,9 +8,7 @@ import {
   Lightbulb,
   Star,
   Vibrate,
-  VibrateOff,
   Volume2,
-  VolumeX,
   X,
   type IconNode,
 } from 'lucide'
@@ -198,44 +196,4 @@ export const createSettingsSheet = (): SettingsSheet => {
       )
     },
   }
-}
-
-const QUICK: readonly { key: SettingKey; label: string; on: IconNode; off: IconNode }[] = [
-  { key: 'sound', label: 'Sound', on: Volume2, off: VolumeX },
-  { key: 'haptics', label: 'Haptics', on: Vibrate, off: VibrateOff },
-]
-
-// The pause screen's pair of icon switches. Any tap on that screen resumes the run, so these
-// claim their own pointerdown before it reaches the overlay.
-export const createQuickToggles = (): HTMLElement => {
-  const root = document.createElement('div')
-  root.className = 'flex gap-3'
-  root.dataset.ui = ''
-
-  for (const { key, label, on, off } of QUICK) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.setAttribute('role', 'switch')
-    button.ariaLabel = label
-    button.className =
-      `${PRESS} flex h-12 w-12 items-center justify-center rounded-full border border-white/25 ` +
-      'bg-white/15 text-white shadow-[0_18px_40px_rgba(15,23,42,0.35)] backdrop-blur-xl'
-
-    const sync = (): void => {
-      const enabled = setting(key)
-      button.setAttribute('aria-checked', String(enabled))
-      button.replaceChildren(icon(enabled ? on : off, 22))
-      button.style.opacity = enabled ? '1' : '0.6'
-    }
-    sync()
-    watchSettings(sync)
-
-    button.addEventListener('pointerdown', (event: PointerEvent) => {
-      event.preventDefault()
-      event.stopPropagation()
-      toggle(key)
-    })
-    root.append(button)
-  }
-  return root
 }

@@ -20,14 +20,11 @@ export const attachPause = (
   state: GameState,
   overlay: HTMLElement,
   message: HTMLElement,
-  // Shown under the message on a real pause, never on the rotate prompt.
-  controls?: HTMLElement,
 ): PauseControl => {
   let blockedByOrientation = false
 
   const show = (text: string) => {
     message.textContent = text
-    if (controls) controls.style.display = blockedByOrientation ? 'none' : ''
     overlay.style.display = 'flex'
     state.paused = true
     state.pressed = false

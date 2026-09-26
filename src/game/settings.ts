@@ -30,7 +30,7 @@ const load = (): Settings => {
 
 // Loaded on first read: vite.config pulls in the sound module, and Node has no window.
 let current: Settings | null = null
-// The map's sheet and the pause screen both show these, and either can change them.
+// The settings sheet's switches redraw from here rather than from their own clicks.
 const listeners = new Set<() => void>()
 
 const loaded = (): Settings => (current ??= load())

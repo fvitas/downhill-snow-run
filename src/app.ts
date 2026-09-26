@@ -42,9 +42,10 @@ import { createHud, type Hud, type HudActions } from './ui/hud.ts'
 import { createInspector } from './ui/inspect.ts'
 import { createLevelMap } from './ui/map.ts'
 import { playHaptics } from './ui/haptics.ts'
-import { createQuickToggles, createSettingsSheet } from './ui/settings.ts'
+import { createSettingsSheet } from './ui/settings.ts'
 import { initSound, playClick, playSounds } from './ui/sound.ts'
 import { createTuningPanel } from './ui/sliders.ts'
+import { createTutorial } from './ui/tutorial.ts'
 
 const MAX_FRAME_SECONDS = 1 / 30
 const TRAIL_POINT_SPACING = 8
@@ -91,6 +92,7 @@ export const createGame = (mount: GameMount): Game => {
   const { ctx } = createViewport(canvas, mount.host)
   const inspector = createInspector(state, () => retry())
   const confetti = createConfetti()
+  const tutorial = createTutorial(state, canvas)
 
   const openMap = (): void => {
     state.screen = 'map'
@@ -108,6 +110,7 @@ export const createGame = (mount: GameMount): Game => {
     inspector.close()
     confetti.reset()
     startLevel(state, index)
+    tutorial.start(index === 1 && !clearedBefore(progress, 1))
     const record = recordOf(progress, index)
     state.bestScore = record.score
     state.bestReach = record.reach
@@ -124,9 +127,7 @@ export const createGame = (mount: GameMount): Game => {
   const retry = clicked(() => play(state.level.index))
   const settingsSheet = createSettingsSheet()
   const map = createLevelMap(clicked(play), clicked(settingsSheet.open))
-  const quickToggles = createQuickToggles()
-  overlay.append(quickToggles)
-  const pauseControl = attachPause(state, overlay, overlayMessage, quickToggles)
+  const pauseControl = attachPause(state, overlay, overlayMessage)
 
   const hud = (mount.hud ?? createHud)(state, {
     onRetry: retry,
@@ -144,6 +145,7 @@ export const createGame = (mount: GameMount): Game => {
   // Confetti sits over the finish card but under the map, which covers the whole stage.
   stage.append(
     hud.root,
+    tutorial.root,
     confetti.root,
     map.root,
     settingsSheet.root,
@@ -224,7 +226,7 @@ export const createGame = (mount: GameMount): Game => {
   let handle = 0
 
   const frame = (now: number): void => {
-    const dt = Math.min((now - previous) / 1_000, MAX_FRAME_SECONDS)
+    const dt = Math.min((now - previous) / 1_000, MAX_FRAME_SECONDS) * tutorial.timeScale()
     previous = now
     handle = requestAnimationFrame(frame)
 
@@ -233,7 +235,7 @@ export const createGame = (mount: GameMount): Game => {
       return
     }
 
-    if (!state.paused) {
+    if (!state.paused && !tutorial.holding()) {
       if (!state.started && !runOver(state)) stepCountIn(dt)
       else if (runActive(state)) stepRun(dt)
 
@@ -254,6 +256,7 @@ export const createGame = (mount: GameMount): Game => {
     if (state.style === 'faux3d') render3d(ctx, state)
     else render(ctx, state, camY)
     hud.update()
+    tutorial.update()
     panel?.setReadout(
       `${Math.round(state.speed)} px/s · ${Math.round(state.y / PIXELS_PER_METRE)} m · ` +
         `L${state.level.index} d${state.level.difficulty.toFixed(2)}`,
