@@ -30,6 +30,7 @@ export const award = (state: GameState, points: number, x: number, y: number): v
 export const nearMiss = (state: GameState, x: number, y: number): void => {
   state.combo += 1
   award(state, comboPoints(state.combo), x, y)
+  state.cues.push('nearMiss')
 }
 
 // Soft things cost points and the chain, never the run.
@@ -38,6 +39,7 @@ export const penalty = (state: GameState, points: number, x: number, y: number):
   state.combo = 0
   pop(state, x, y, `−${points}`, 'ink')
   burst(state, x, y, 10)
+  state.cues.push('penalty')
 }
 
 // Ghosting through, or the beat after a helmet save: nothing lethal can land.
@@ -55,6 +57,7 @@ export const trySave = (state: GameState, x: number, y: number): boolean => {
   state.helmetBreak = { x: state.x, y: state.y, age: 0 }
   pop(state, x, y - 40, 'Saved', 'ink')
   burst(state, state.x, state.y, 12)
+  state.cues.push('save')
   return true
 }
 
@@ -75,6 +78,7 @@ export const kill = (state: GameState, kind: HitRecord['kind'], tree: Tree | nul
     tree: tree ? { x: tree.x, y: tree.y, radius: tree.radius, ...treeHitExtents(state, tree) } : null,
   }
   burst(state, state.x, state.y, 30, 'clod')
+  state.cues.push('crash')
 }
 
 // Trunk only — the canopy triangles are decoration — minus a few pixels so a scrape down the side

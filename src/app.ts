@@ -29,6 +29,7 @@ import {
   scoreDistance,
   startLevel,
   COUNTDOWN_SECONDS,
+  COUNTDOWN_TICK_SECONDS,
   type GameState,
 } from './game/state.ts'
 import { loadTuning } from './game/storage.ts'
@@ -39,6 +40,8 @@ import { createConfetti } from './ui/confetti.ts'
 import { createHud, type Hud, type HudActions } from './ui/hud.ts'
 import { createInspector } from './ui/inspect.ts'
 import { createLevelMap } from './ui/map.ts'
+import { playHaptics } from './ui/haptics.ts'
+import { initSound, playClick, playSounds } from './ui/sound.ts'
 import { createTuningPanel } from './ui/sliders.ts'
 
 const MAX_FRAME_SECONDS = 1 / 30
@@ -109,18 +112,26 @@ export const createGame = (mount: GameMount): Game => {
     reachSaved = false
   }
 
-  const map = createLevelMap(play)
+  const clicked =
+    <A extends unknown[]>(action: (...args: A) => void) =>
+    (...args: A): void => {
+      playClick()
+      action(...args)
+    }
+
+  const map = createLevelMap(clicked(play))
   const pauseControl = attachPause(state, overlay, overlayMessage)
 
   const hud = (mount.hud ?? createHud)(state, {
-    onRetry: () => play(state.level.index),
-    onNext: () => play(state.level.index + 1),
-    onCrashSite: inspector.open,
-    onMenu: openMap,
-    onPause: pauseControl.pause,
+    onRetry: clicked(() => play(state.level.index)),
+    onNext: clicked(() => play(state.level.index + 1)),
+    onCrashSite: clicked(inspector.open),
+    onMenu: clicked(openMap),
+    onPause: clicked(pauseControl.pause),
   })
 
   preloadSprites()
+  initSound()
 
   // Twelve sliders that can break the game — a playtest tool, never shipped.
   const panel = (mount.tuningPanel ?? import.meta.env.DEV) ? createTuningPanel(state) : null
@@ -145,6 +156,7 @@ export const createGame = (mount: GameMount): Game => {
     state.newBest = clearedBefore(progress, index) && state.score > state.bestScore
     progress = recordRun(progress, index, state.score)
     if (persist) saveProgress(progress)
+    if (state.newBest) state.cues.push('best')
   }
 
   // Crossing the tape doesn't end the run on the spot: the ball skis through it for a beat, which
@@ -157,11 +169,19 @@ export const createGame = (mount: GameMount): Game => {
     } else if (state.y >= finishY(state)) {
       state.coast = FINISH_COAST_SECONDS
       confetti.celebrate()
+      state.cues.push('finish')
     }
   }
 
   const stepCountIn = (dt: number): void => {
+    const before = state.countdown
     state.countdown -= dt
+    const tick = Math.ceil(state.countdown / COUNTDOWN_TICK_SECONDS)
+    if (before >= COUNTDOWN_SECONDS || (tick > 0 && tick < Math.ceil(before / COUNTDOWN_TICK_SECONDS))) {
+      state.cues.push('count')
+    } else if (before > 0 && state.countdown <= 0) {
+      state.cues.push('go')
+    }
     if (state.countdown <= -GO_HOLD_SECONDS) state.started = true
   }
 
@@ -207,6 +227,12 @@ export const createGame = (mount: GameMount): Game => {
       // Effects outlive the run: the crash burst and the impact hold both keep counting down.
       stepParticles(state, dt)
       stepEffects(state, dt)
+    }
+
+    if (state.cues.length > 0) {
+      playSounds(state.cues)
+      playHaptics(state.cues)
+      state.cues.length = 0
     }
 
     const camY = cameraY(state)

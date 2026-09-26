@@ -8,6 +8,7 @@ import { flyNumber, punch, reducedMotion } from './fly.ts'
 import type { ScoreAnchor } from './hud.ts'
 import { bakePlate, PLATE_H, PLATE_W, rowAt, SPLIT, type Plate } from './plate.ts'
 import { formatPoints, POINTS_LOCALE } from './points.ts'
+import { playClick } from './sound.ts'
 
 export type LevelMap = {
   root: HTMLElement
@@ -510,7 +511,10 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
     })
   }
 
-  jump.addEventListener('click', () => scrollTo(current, 'smooth'))
+  jump.addEventListener('click', () => {
+    playClick()
+    scrollTo(current, 'smooth')
+  })
 
   let queued = false
   const onScroll = (): void => {

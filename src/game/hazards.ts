@@ -410,6 +410,7 @@ const passGate = (state: GameState, hazard: Hazard): void => {
   if (Math.abs(ballXAt(state, hazard.y) - hazard.x) >= GATE_HALF) return
   hazard.grazed = true
   award(state, GATE_POINTS, hazard.x, hazard.y - 60)
+  state.cues.push('gate')
 }
 
 const takeJump = (state: GameState, hazard: Hazard): void => {
@@ -418,6 +419,7 @@ const takeJump = (state: GameState, hazard: Hazard): void => {
   if (Math.abs(state.x - hazard.x) > JUMP.w / 2 - 4) return
   hazard.spent = true
   state.air = { lip: hazard.y }
+  state.cues.push('jump')
 }
 
 export const checkHazards = (state: GameState): void => {
@@ -488,6 +490,7 @@ const collectPickups = (state: GameState): void => {
     else if (pickup.kind === 'ghost') state.ghost = POWER_SECONDS
     else state.double = POWER_SECONDS
     pop(state, pickup.x, pickup.y - 34, POWER_LABELS[pickup.kind], 'ink')
+    state.cues.push('pickup')
   }
 }
 
@@ -504,6 +507,7 @@ export const stepPowers = (state: GameState, dt: number): void => {
   if (state.air && state.y >= state.air.lip + JUMP.air) {
     state.air = null
     award(state, JUMP.points, state.x, state.y - 40)
+    state.cues.push('land')
   }
 }
 

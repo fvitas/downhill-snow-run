@@ -2,12 +2,14 @@ import { readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import type { Plugin } from 'vite'
 import { SPRITE_PATHS } from './src/game/sprites.ts'
+import { SOUND_PATHS } from './src/ui/sound.ts'
 import { PROP_SLUGS } from './src/game/worlds.ts'
 
 // The mockups load far more of public/ than the game does, so only what the game asks for ships.
 const shippedPaths = (publicDir: string): Set<string> => {
   const shipped = new Set(['favicon.png', 'apple-touch-icon.png', 'map/plate.webp'])
   for (const path of SPRITE_PATHS) shipped.add(`sprites/${path}`)
+  for (const path of SOUND_PATHS) shipped.add(path)
   for (const slug of PROP_SLUGS) {
     const props = `map/props/props-${slug}.json`
     shipped.add(props)

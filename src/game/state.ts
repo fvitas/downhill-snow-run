@@ -58,6 +58,21 @@ export type InspectState = { on: boolean; zoom: number; panX: number; panY: numb
 
 export type Screen = 'map' | 'run'
 
+// Moments the run reports for sound and haptics to pick up; the loop drains them every frame.
+export type Cue =
+  | 'nearMiss'
+  | 'gate'
+  | 'jump'
+  | 'land'
+  | 'pickup'
+  | 'save'
+  | 'penalty'
+  | 'crash'
+  | 'count'
+  | 'go'
+  | 'finish'
+  | 'best'
+
 export type GameState = {
   tuning: TuningConfig
   style: RenderStyle
@@ -114,6 +129,7 @@ export type GameState = {
   trail: TrailPoint[]
   particles: Particle[]
   sprayAccumulator: number
+  cues: Cue[]
 }
 
 export const cameraY = (state: GameState): number => cameraYFor(state.y, finishY(state))
@@ -196,6 +212,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     trail: [],
     particles: [],
     sprayAccumulator: 0,
+    cues: [],
   }
 }
 
@@ -259,6 +276,7 @@ export const resetRun = (state: GameState): void => {
   state.trail.length = 0
   state.particles.length = 0
   state.sprayAccumulator = 0
+  state.cues.length = 0
 
   for (const tree of state.course.trees) tree.grazed = false
   for (const rock of state.course.rocks) resetRock(rock)
