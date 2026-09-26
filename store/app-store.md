@@ -58,7 +58,7 @@ ski,skiing,snow,slalom,winter,mountain,downhill,one tap,arcade,endless,runner,of
 
 **Marketing URL:** optional. Leave empty.
 
-**Privacy Policy URL:** host `store/privacy-policy.html`, then paste its address.
+**Privacy Policy URL:** https://github.com/fvitas/downhill-snow-run/blob/main/store/privacy-policy.md
 
 **Copyright:** `2026 Filip Vitas`
 

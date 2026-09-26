@@ -15,7 +15,7 @@ Paste each field as is. The character limits are Google's and every value fits.
 | Tags | Skiing, Casual, Arcade, Offline, Single player |
 | Contact email | app.filip.vitas@gmail.com |
 | Website | optional. Paste the hosted support page address. |
-| Privacy policy | the hosted `store/privacy-policy.html` address. Required. |
+| Privacy policy | https://github.com/fvitas/downhill-snow-run/blob/main/store/privacy-policy.md Required. |
 
 **Short description (80)**
 
@@ -58,7 +58,7 @@ iPhone screenshots are 1290 × 2796, which is taller than 2:1. Run `store/crop-f
 
 ## App content, the Policy section
 
-**Privacy policy:** the hosted address above.
+**Privacy policy:** https://github.com/fvitas/downhill-snow-run/blob/main/store/privacy-policy.md
 
 **Ads:** No, my app does not contain ads.
 

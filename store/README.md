@@ -6,7 +6,7 @@ Everything the stores ask for lives in this folder.
 | --- | --- |
 | `app-store.md` | App Store Connect texts, privacy answers and age rating |
 | `google-play.md` | Play Console texts, data safety, content rating and target audience |
-| `privacy-policy.html` / `.md` | The privacy policy both stores require a public address for |
+| `privacy-policy.md` / `.html` | The privacy policy both stores require a public address for; the stores link the `.md` on GitHub |
 | `support.html` | The support page App Store Connect requires |
 | `feature-graphic.png` | Play's 1024 × 500 feature graphic, rendered from `feature-graphic.html` |
 | `crop-for-play.sh` | Turns iPhone screenshots into Play-sized ones |
@@ -22,13 +22,17 @@ The key is `android/upload-keystore.jks`, and its passwords are in `android/keys
 
 ## 2. Host the policy and support pages
 
-Both stores need public addresses. The simplest free option is GitHub Pages:
+Both stores need public addresses.
+
+The privacy policy is served from this public repo on GitHub, so it needs no hosting: `https://github.com/fvitas/downhill-snow-run/blob/main/store/privacy-policy.md`. Edit `privacy-policy.md` and push to change it, and keep `privacy-policy.html` in step.
+
+The support page still needs a host. The simplest free option is GitHub Pages:
 
 1. Create a public repo, for example `downhill-site`.
-2. Copy `privacy-policy.html` and `support.html` into it.
+2. Copy `support.html` into it.
 3. Turn on Pages in the repo settings.
 
-The addresses then look like `https://<user>.github.io/downhill-site/privacy-policy.html`.
+The address then looks like `https://<user>.github.io/downhill-site/support.html`.
 
 ## 3. Take screenshots
 

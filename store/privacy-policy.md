@@ -1,6 +1,6 @@
 # Privacy Policy for Downhill: Snow Run
 
-Effective date: 25 September 2026
+Effective date: 26 September 2026
 
 Downhill: Snow Run ("the app") is a single-player game made by Filip Vitas.
 
@@ -14,9 +14,19 @@ Nothing. The app does not collect, store on a server, share or sell any personal
 
 ## What stays on your device
 
-Your game progress is saved only on your own device, in the app's local storage. It includes the
-levels you have unlocked, your best score per level and your chosen colour theme. This data never
-leaves the device. Deleting the app deletes it.
+Your game progress and settings are saved only on your own device, in the app's local storage.
+They include the levels you have unlocked, your best score and furthest run per level, your chosen
+colour theme, and whether sound, haptics and the crash shake are on. This data never leaves the
+device. Deleting the app deletes it.
+
+## Links out of the app
+
+The settings screen has links that open outside the app. The app itself sends nothing through them.
+
+- "Report a bug" and "Request a feature" open a GitHub issue form in your browser, with the game
+  version filled in. Anything you submit there is public and is handled under
+  [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
+- "Rate Downhill" opens the app's page in the App Store or Google Play.
 
 ## Children
 
