@@ -1,4 +1,5 @@
 import { pickChunk, TREE_MARGIN, type ChunkTree } from './chunks.ts'
+import { DEFAULT_PRESET, PRESETS } from './config.ts'
 import { placeFeatures } from './features.ts'
 import { createRng, hashSeed, rngInt, rngRange, type Rng } from './rng.ts'
 import {
@@ -126,10 +127,16 @@ const widestLanePx = (trees: Tree[], y: number, candidateX: number): number => {
 
 // One loose tree at `y`, or nothing at all if every x tried would close the lane. A crowded spot
 // gets a few shots at a different x before it is given up on.
-const tryStray = (rng: Rng, trees: Tree[], y: number, gap: number): void => {
+const tryStray = (
+  rng: Rng,
+  trees: Tree[],
+  y: number,
+  gap: number,
+  allowed: (x: number) => boolean = () => true,
+): void => {
   for (let tries = 0; tries < STRAY_X_TRIES; tries += 1) {
     const x = rngRange(rng, TREE_MARGIN, LOGICAL_WIDTH - TREE_MARGIN)
-    if (widestLanePx(trees, y, x) < gap) continue
+    if (!allowed(x) || widestLanePx(trees, y, x) < gap) continue
     trees.push({
       x,
       y,
@@ -193,6 +200,28 @@ const fillTrees = (rng: Rng, level: Level, from: number, end: number): Tree[] =>
   return trees.sort((a, b) => a.y - b.y)
 }
 
+// The run-in is loose trees too, bar a short stretch under the ball, so the first seconds score.
+const RUN_IN_CLEAR_PX = 150
+const RUN_IN_SPACING_PX: readonly [number, number] = [50, 90]
+// The ball sets off down and to the right; a player who hasn't tapped yet must not meet a trunk there.
+const START_PATH_SLOPE = Math.tan((PRESETS[DEFAULT_PRESET].turnAngleDeg * Math.PI) / 180)
+const START_PATH_CLEAR_PX = 60
+
+const offStartPath = (y: number) => (x: number): boolean =>
+  x < LOGICAL_WIDTH / 2 - START_PATH_CLEAR_PX ||
+  x > LOGICAL_WIDTH / 2 + y * START_PATH_SLOPE + START_PATH_CLEAR_PX
+
+const fillRunIn = (rng: Rng, trees: Tree[], gap: number): void => {
+  for (let y = RUN_IN_CLEAR_PX; y < RUN_IN_PX; y += rngRange(rng, ...RUN_IN_SPACING_PX)) {
+    const count = rngInt(rng, 1, 2)
+    for (let i = 0; i < count; i += 1) {
+      const treeY = y + rngRange(rng, -15, 15)
+      tryStray(rng, trees, treeY, gap, offStartPath(treeY))
+    }
+  }
+  trees.sort((a, b) => a.y - b.y)
+}
+
 // Rocks arrive once the slope is busy enough to be read at a glance, and only on tree levels.
 export const ROCKS_FROM_DIFFICULTY = 0.22
 const ROCK_SPACING = 1_400
@@ -242,6 +271,8 @@ type Stretch = Omit<Course, 'lengthPx' | 'perfectScore'> & { points: number }
 const buildStretch = (level: Level, seed: number, from: number, end: number): Stretch => {
   const rng = createRng(seed)
   const trees = fillTrees(rng, level, from, end)
+  // Its own rng, so everything past the run-in keeps the layout each level always had.
+  if (from === RUN_IN_PX) fillRunIn(createRng(seed ^ 0x5a17), trees, level.minGapPx)
   const featureEnd = level.endless ? end : level.distanceM * PIXELS_PER_METRE * FEATURES_END_FRACTION
   const rocks = fillRocks(createRng(seed ^ 0x1c3b), level, from, featureEnd)
   const features = placeFeatures(
