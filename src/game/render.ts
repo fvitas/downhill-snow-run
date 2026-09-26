@@ -1,7 +1,7 @@
 import { drawHazardOver, drawHazardStanding, drawHazardUnder, hazardReach } from './hazard-art.ts'
 import { airPose, type AirPose } from './hazards.ts'
 import { drawPine, drawShadow } from './pine.ts'
-import { drawChips, drawGhostTrail, drawHelmetOn, drawPickup, drawShards, ghostAlpha } from './power-art.ts'
+import { drawGhostTrail, drawHelmetOn, drawPickup, drawShards, ghostAlpha } from './power-art.ts'
 import { treeHitExtents } from './scoring.ts'
 import { finishY, type GameState, type Hazard, type ParticleKind, type Tree } from './state.ts'
 import { visibleRocks } from './rocks.ts'
@@ -311,7 +311,6 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   // The hitboxes are a playtest tool, so players see the slope alone.
   if (state.inspect.on && import.meta.env.DEV) drawHitboxes(ctx, state, camY)
   ctx.restore()
-  if (!state.inspect.on) drawChips(ctx, state)
 }
 
 export const stepEffects = (state: GameState, dt: number): void => {

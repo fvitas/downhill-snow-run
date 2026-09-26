@@ -8,6 +8,7 @@ import {
 import { UI_THEME } from '../game/themes.ts'
 import { applyGlass, applySolid, GLASS, PRESS, isDarkTheme, withAlpha } from './glass.ts'
 import { formatPoints } from './points.ts'
+import { createPowerBadges } from './powers.ts'
 
 export type HudActions = {
   onRetry: () => void
@@ -181,12 +182,18 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   endlessPill.textContent = 'ENDLESS'
 
   const scoreLine = document.createElement('div')
-  scoreLine.className = 'mt-4 text-6xl font-bold tabular-nums tracking-tight'
+  scoreLine.className = 'text-6xl font-bold tabular-nums tracking-tight'
+
+  // Full width so the power-ups can hang off the right edge, the first one level with the score.
+  const powers = createPowerBadges(state)
+  const scoreRow = document.createElement('div')
+  scoreRow.className = 'relative mt-4 flex w-full justify-center'
+  scoreRow.append(scoreLine, powers.root)
 
   const comboLine = document.createElement('div')
   comboLine.className = 'h-7 text-xl font-semibold tracking-wide'
 
-  header.append(ghostRow, barRow, badgeRow, endlessPill, scoreLine, comboLine)
+  header.append(ghostRow, barRow, badgeRow, endlessPill, scoreRow, comboLine)
 
   // The scene freezes behind the sheet and is blurred out, so the card owns the screen.
   const card = document.createElement('div')
@@ -255,6 +262,10 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   const countdownDisc = document.createElement('div')
   countdownDisc.className =
     `${GLASS} relative flex h-36 w-36 items-center justify-center rounded-full font-bold`
+  // Only the digit pops; the disc holds still so the count never flashes.
+  const countdownText = document.createElement('span')
+  countdownText.className = 'block'
+  countdownDisc.append(countdownText)
   countdown.append(countdownDisc)
 
   root.append(pause, header, countdown, card)
@@ -281,6 +292,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
       header.style.display = showCard || state.inspect.on ? 'none' : 'flex'
       pause.style.display = showCard || counting || state.inspect.on ? 'none' : 'flex'
+      powers.update(!showCard && !state.inspect.on)
       applyGlass(pause, theme)
       pause.style.color = theme.ink
 
@@ -354,12 +366,12 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
         countdownDisc.style.color = theme.ink
         const tick = Math.ceil(state.countdown / COUNTDOWN_TICK_SECONDS)
         const text = tick > 0 ? String(tick) : 'GO'
-        if (countdownDisc.textContent !== text) {
-          countdownDisc.textContent = text
+        if (countdownText.textContent !== text) {
+          countdownText.textContent = text
           // GO is two glyphs wide; at the digits' size it crowds the disc's rim.
           countdownDisc.classList.toggle('text-5xl', text === 'GO')
           countdownDisc.classList.toggle('text-7xl', text !== 'GO')
-          countdownDisc.animate(
+          countdownText.animate(
             [
               { transform: 'scale(0.82)', opacity: 0.4 },
               { transform: 'scale(1)', opacity: 1 },

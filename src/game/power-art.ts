@@ -1,6 +1,5 @@
-import { helmetBreakProgress, POWER_SECONDS } from './hazards.ts'
+import { helmetBreakProgress } from './hazards.ts'
 import type { GameState, Pickup, PowerKind } from './state.ts'
-import { viewHeight } from './viewport.ts'
 
 type Icon = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number) => void
 
@@ -59,6 +58,11 @@ const POWERS: Record<PowerKind, { colour: string; icon: Icon }> = {
   double: { colour: '#d97706', icon: drawDoubleIcon },
 }
 
+export const powerColour = (kind: PowerKind): string => POWERS[kind].colour
+
+export const drawPowerIcon = (ctx: CanvasRenderingContext2D, kind: PowerKind, x: number, y: number, s: number): void =>
+  POWERS[kind].icon(ctx, x, y, s)
+
 export const drawPickup = (ctx: CanvasRenderingContext2D, state: GameState, pickup: Pickup, camY: number): void => {
   const power = POWERS[pickup.kind]
   const x = pickup.x
@@ -89,14 +93,35 @@ export const drawPickup = (ctx: CanvasRenderingContext2D, state: GameState, pick
 const GHOST_TRAIL = 4
 const GHOST_TRAIL_GAP = 16
 
-// Faint copies left behind along the line of travel, so a see-through ball still reads as moving.
+// Walks back up the snow track from the ball, so the copies bend with every turn.
+const pointsBehind = (state: GameState): { x: number; y: number }[] => {
+  const found: { x: number; y: number }[] = []
+  let ahead = { x: state.x, y: state.y }
+  let walked = 0
+  for (let i = state.trail.length - 1; i >= 0 && found.length < GHOST_TRAIL; i -= 1) {
+    const point = state.trail[i]
+    if (!point) continue
+    const length = Math.hypot(ahead.x - point.x, ahead.y - point.y)
+    while (found.length < GHOST_TRAIL && walked + length >= (found.length + 1) * GHOST_TRAIL_GAP) {
+      const t = ((found.length + 1) * GHOST_TRAIL_GAP - walked) / length
+      found.push({ x: ahead.x + (point.x - ahead.x) * t, y: ahead.y + (point.y - ahead.y) * t })
+    }
+    walked += length
+    ahead = point
+  }
+  return found
+}
+
+// Faint copies left behind on the track, so a see-through ball still reads as moving.
 export const drawGhostTrail = (ctx: CanvasRenderingContext2D, state: GameState, x: number, y: number): void => {
   const r = state.tuning.ballRadius
-  const slope = Math.tan(state.angle)
-  for (let k = GHOST_TRAIL; k >= 1; k -= 1) {
+  const points = pointsBehind(state)
+  for (let k = points.length; k >= 1; k -= 1) {
+    const point = points[k - 1]
+    if (!point) continue
     ctx.fillStyle = `rgba(167, 139, 250, ${0.09 * (5 - k)})`
     ctx.beginPath()
-    ctx.arc(x - slope * k * GHOST_TRAIL_GAP, y - k * GHOST_TRAIL_GAP, r * (1 - 0.1 * k), 0, Math.PI * 2)
+    ctx.arc(x + point.x - state.x, y + point.y - state.y, r * (1 - 0.1 * k), 0, Math.PI * 2)
     ctx.fill()
   }
 }
@@ -117,7 +142,7 @@ export const drawHelmetOn = (ctx: CanvasRenderingContext2D, state: GameState, x:
   ctx.arc(x, y, r + 6, 0, Math.PI * 2)
   ctx.stroke()
   ctx.restore()
-  drawHelmetIcon(ctx, x, y - 3, 0.6)
+  drawHelmetIcon(ctx, x, y - 3, 0.75)
 }
 
 export const drawShards = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
@@ -139,43 +164,4 @@ export const drawShards = (ctx: CanvasRenderingContext2D, state: GameState, camY
     ctx.restore()
   }
   ctx.restore()
-}
-
-const CHIP = { x: 20, w: 150, h: 44, gap: 8, bottom: 40 }
-
-// The live power-ups, stacked up from the bottom-left corner; `left` runs from 1 down to 0.
-const drawChip = (ctx: CanvasRenderingContext2D, kind: PowerKind, left: number, label: string, y: number): void => {
-  const power = POWERS[kind]
-  const { x, w, h } = CHIP
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.72)'
-  ctx.beginPath()
-  ctx.roundRect(x, y, w, h, h / 2)
-  ctx.fill()
-  ctx.fillStyle = '#ffffff'
-  ctx.beginPath()
-  ctx.arc(x + 22, y + 22, 16, 0, Math.PI * 2)
-  ctx.fill()
-  power.icon(ctx, x + 22, y + 22, 0.9)
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.18)'
-  ctx.beginPath()
-  ctx.roundRect(x + 46, y + 29, 90, 6, 3)
-  ctx.fill()
-  ctx.fillStyle = power.colour
-  ctx.beginPath()
-  ctx.roundRect(x + 46, y + 29, 90 * left, 6, 3)
-  ctx.fill()
-  ctx.fillStyle = '#f8fafc'
-  ctx.font = '700 15px system-ui, sans-serif'
-  ctx.textAlign = 'left'
-  ctx.fillText(label, x + 46, y + 22)
-}
-
-export const drawChips = (ctx: CanvasRenderingContext2D, state: GameState): void => {
-  const chips: [PowerKind, number, string][] = []
-  if (state.helmet) chips.push(['helmet', 1, '1 hit'])
-  if (state.ghost > 0) chips.push(['ghost', state.ghost / POWER_SECONDS, `${state.ghost.toFixed(1)} s`])
-  if (state.double > 0) chips.push(['double', state.double / POWER_SECONDS, `${state.double.toFixed(1)} s`])
-  chips.forEach(([kind, left, label], i) => {
-    drawChip(ctx, kind, left, label, viewHeight() - CHIP.bottom - CHIP.h - i * (CHIP.h + CHIP.gap))
-  })
 }
