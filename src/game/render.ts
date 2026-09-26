@@ -156,7 +156,7 @@ const drawBall = (ctx: CanvasRenderingContext2D, state: GameState, camY: number,
   ctx.fill()
   ctx.stroke()
   ctx.restore()
-  if (state.helmet) drawHelmetOn(ctx, state, state.x, y, r)
+  if (state.helmet) drawHelmetOn(ctx, state.x, y, r)
 }
 
 // How wide the drift is and how far its flat base sits below the ball, both in ball radii. The

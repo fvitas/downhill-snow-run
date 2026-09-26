@@ -133,15 +133,13 @@ export const ghostAlpha = (state: GameState): number => {
   return 0.4
 }
 
-export const drawHelmetOn = (ctx: CanvasRenderingContext2D, state: GameState, x: number, y: number, r: number): void => {
-  ctx.save()
-  ctx.globalAlpha = 0.55
-  ctx.strokeStyle = state.theme.ink
+export const drawHelmetOn = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void => {
+  // The helmet's own near-black, so the ring reads as part of it on every world.
+  ctx.strokeStyle = '#262b33'
   ctx.lineWidth = 2.5
   ctx.beginPath()
   ctx.arc(x, y, r + 6, 0, Math.PI * 2)
   ctx.stroke()
-  ctx.restore()
   drawHelmetIcon(ctx, x, y - 3, 0.78)
 }
 
