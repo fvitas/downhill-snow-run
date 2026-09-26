@@ -96,7 +96,7 @@ const createCard = (onClose: () => void): HTMLElement => {
 
 export type Tutorial = {
   root: HTMLElement
-  // Every level start calls this; only an uncleared level 1 passes `active`.
+  // Every level start calls this; only level 1 passes `active`.
   start: (active: boolean) => void
   // The tips card keeps the countdown from starting until it is dismissed.
   holding: () => boolean
@@ -124,7 +124,6 @@ export const createTutorial = (state: GameState, canvas: HTMLCanvasElement): Tut
   root.append(vignette, ring, tap, toast)
 
   let active = false
-  let cardSeen = false
   let card: HTMLElement | null = null
   let lessons = 0
   let slow = false
@@ -173,8 +172,7 @@ export const createTutorial = (state: GameState, canvas: HTMLCanvasElement): Tut
       toast.style.display = 'none'
       showCoach(false)
       closeCard()
-      if (active && !cardSeen) {
-        cardSeen = true
+      if (active) {
         card = createCard(closeCard)
         root.append(card)
       }

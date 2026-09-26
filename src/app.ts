@@ -110,7 +110,7 @@ export const createGame = (mount: GameMount): Game => {
     inspector.close()
     confetti.reset()
     startLevel(state, index)
-    tutorial.start(index === 1 && !clearedBefore(progress, 1))
+    tutorial.start(index === 1)
     const record = recordOf(progress, index)
     state.bestScore = record.score
     state.bestReach = record.reach

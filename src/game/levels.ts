@@ -208,8 +208,7 @@ const START_PATH_SLOPE = Math.tan((PRESETS[DEFAULT_PRESET].turnAngleDeg * Math.P
 const START_PATH_CLEAR_PX = 60
 
 const offStartPath = (y: number) => (x: number): boolean =>
-  x < LOGICAL_WIDTH / 2 - START_PATH_CLEAR_PX ||
-  x > LOGICAL_WIDTH / 2 + y * START_PATH_SLOPE + START_PATH_CLEAR_PX
+  Math.abs(x - (LOGICAL_WIDTH / 2 + y * START_PATH_SLOPE)) > START_PATH_CLEAR_PX
 
 const fillRunIn = (rng: Rng, trees: Tree[], gap: number): void => {
   for (let y = RUN_IN_CLEAR_PX; y < RUN_IN_PX; y += rngRange(rng, ...RUN_IN_SPACING_PX)) {
