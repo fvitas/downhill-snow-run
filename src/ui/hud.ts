@@ -107,36 +107,37 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
   const fromNode = document.createElement('div')
   fromNode.className =
-    'relative z-10 -mr-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ' +
+    'relative z-20 -mr-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ' +
     'text-sm font-bold'
 
   const toNode = document.createElement('div')
   toNode.className =
-    'relative z-10 -ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ' +
+    'relative -ml-[4.5px] flex h-10 w-10 shrink-0 items-center justify-center rounded-full ' +
     'border-[3px] text-sm font-bold'
 
-  // Square left end: the node overlaps it, so a radius there would only show as a notch.
+  // Both ends tuck under the nodes. The right one sits over the ring's left arc and stops where its
+  // edges meet the ring's stroke, so the ring reads as opening into the track.
   const track = document.createElement('div')
-  track.className = 'relative h-4 grow overflow-hidden rounded-r-full'
+  track.className = 'relative z-10 h-5 grow overflow-hidden border-y-[3px]'
 
   // How far the best failed attempt got, painted over the bare track but under the live fill.
   const band = document.createElement('div')
-  band.className = 'absolute inset-y-0 left-0 rounded-r-full'
+  band.className = 'absolute inset-y-0 left-0'
 
   // No width transition: the fill is rewritten every frame, so easing it only leaves the head
   // trailing the badge that is meant to point at it.
   const fill = document.createElement('div')
-  fill.className = 'absolute inset-y-0 left-0 rounded-r-full'
+  fill.className = 'absolute inset-y-0 left-0'
   track.append(band, fill)
 
   barRow.append(fromNode, track, toNode)
 
-  // Flush against the pill it hangs off, never over it: the ghost badge is translucent, so any
-  // overlap composites twice and shows as a dark seam.
+  // The ghost badge is translucent, so its caret sits flush: any overlap composites twice and shows
+  // as a dark seam. The live one is opaque, so its caret tucks 1px under to close the hairline gap.
   const caret = (pointsUp: boolean): HTMLElement => {
     const element = document.createElement('div')
     element.className =
-      `absolute left-1/2 h-1.5 w-[13px] -translate-x-1/2 ${pointsUp ? 'bottom-full' : 'top-full'} ` +
+      `absolute left-1/2 h-1.5 w-[13px] -translate-x-1/2 ${pointsUp ? 'bottom-[calc(100%-1px)]' : 'top-full'} ` +
       (pointsUp
         ? '[clip-path:polygon(50%_0,100%_100%,0_100%)]'
         : '[clip-path:polygon(0_0,100%_0,50%_100%)]')
@@ -152,7 +153,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   }
 
   // Hangs off the fill head: the caret points at the exact spot you are on the piste.
-  const liveBadge = pill('top-1.5')
+  const liveBadge = pill('top-[5px]')
   const liveCaret = caret(true)
 
   // The best failed run's own mark. It rides above the bar while the live one hangs below, so the
@@ -288,31 +289,35 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       if (level.endless) applySolid(endlessPill, theme.ink, theme.snow)
 
       if (!level.endless) {
-        const lift = `0 2px 6px ${withAlpha(theme.ink, dark ? 0.35 : 0.16)}`
+        // The bar sits on bare slope like the score, so it takes the world's colours too.
+        const bar = { ...world, ...world.bar }
+        const barDark = isDarkTheme(bar)
+        const lift = `0 2px 6px ${withAlpha(bar.ink, barDark ? 0.35 : 0.16)}`
 
         fromNode.textContent = String(level.index)
-        applySolid(fromNode, theme.ink, theme.snow)
+        applySolid(fromNode, bar.ink, bar.snow)
         toNode.textContent = String(level.index + 1)
-        toNode.style.background = theme.snow
-        toNode.style.borderColor = theme.ink
-        toNode.style.color = theme.ink
-        for (const node of [fromNode, toNode]) node.style.boxShadow = lift
+        toNode.style.background = bar.snow
+        toNode.style.borderColor = bar.ink
+        toNode.style.color = bar.ink
+        for (const node of [fromNode, toNode, track]) node.style.boxShadow = 'none'
+        // One shadow for the whole outline: per-element shadows would smear into the open ring.
+        barRow.style.filter = `drop-shadow(${lift})`
 
-        // Bare snow under the bar, so the track needs its own edge to read against the slope.
-        track.style.background = theme.snow
-        track.style.boxShadow = lift
+        track.style.background = bar.snow
+        track.style.borderColor = bar.ink
         const progress = levelProgress(state)
         // The head is inside the bar, so the tooltips are placed off the track's own offsets —
         // layout px, so a CSS transform on the stage cannot skew them.
         const headXAt = (fraction: number, row: HTMLElement): number =>
           barRow.offsetLeft + track.offsetLeft - row.offsetLeft + fraction * track.offsetWidth
         fill.style.width = `${progress * 100}%`
-        fill.style.background = theme.ink
+        fill.style.background = bar.ink
 
         // The best run only lives until the live fill draws level with it — past that there is
         // nothing left to chase, and a mark behind you is just clutter.
         const bestOn = state.bestReach > 0 && progress < state.bestReach
-        const pale = withAlpha(theme.ink, dark ? 0.45 : 0.32)
+        const pale = withAlpha(bar.ink, barDark ? 0.45 : 0.32)
         band.style.display = bestOn ? 'block' : 'none'
         bestBadge.style.display = bestOn ? 'flex' : 'none'
         if (bestOn) {
@@ -320,18 +325,18 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
           band.style.background = pale
           bestText.textContent = `${Math.round(state.bestReach * 100)}%`
           bestBadge.style.background = pale
-          bestBadge.style.color = theme.snow
+          bestBadge.style.color = bar.snow
           bestCaret.style.background = pale
           bestBadge.style.left = `${headXAt(state.bestReach, ghostRow)}px`
         }
 
         liveText.textContent = `${Math.round(progress * 100)}%`
-        liveBadge.style.background = theme.ink
-        liveBadge.style.color = theme.snow
+        liveBadge.style.background = bar.ink
+        liveBadge.style.color = bar.snow
         // drop-shadow, not box-shadow: a box shadow follows the pill's rounded rect alone and its
         // edge cuts across the caret's base, so the caret reads as a hat sat on top.
         liveBadge.style.filter = `drop-shadow(${lift})`
-        liveCaret.style.background = theme.ink
+        liveCaret.style.background = bar.ink
         liveBadge.style.left = `${headXAt(progress, badgeRow)}px`
       }
 

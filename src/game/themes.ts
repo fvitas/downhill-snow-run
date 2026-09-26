@@ -11,6 +11,8 @@ export type Theme = {
   ball: string
   ballEdge: string
   ink: string
+  // The progress bar's own pair, for worlds where `ink` and `snow` don't read well on the slope.
+  bar?: { ink: string; snow: string }
 }
 
 const PINE_VALLEY: Theme = {
@@ -104,6 +106,7 @@ export const THEMES: readonly Theme[] = [
     ball: '#ffd166',
     ballEdge: '#d9ac3f',
     ink: '#8ea6c0',
+    bar: { ink: '#e8eef6', snow: '#243348' },
   },
 ]
 
