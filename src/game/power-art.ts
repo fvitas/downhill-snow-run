@@ -142,7 +142,7 @@ export const drawHelmetOn = (ctx: CanvasRenderingContext2D, state: GameState, x:
   ctx.arc(x, y, r + 6, 0, Math.PI * 2)
   ctx.stroke()
   ctx.restore()
-  drawHelmetIcon(ctx, x, y - 3, 0.75)
+  drawHelmetIcon(ctx, x, y - 3, 0.78)
 }
 
 export const drawShards = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
