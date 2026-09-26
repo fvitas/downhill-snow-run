@@ -1,6 +1,7 @@
 {
   "name": "downhill",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -9,7 +10,9 @@
     "sync": "pnpm build && cap sync",
     "ios": "pnpm sync && cap open ios",
     "android": "pnpm sync && cap open android",
-    "android:apk": "pnpm sync && cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew assembleDebug -q"
+    "android:apk": "pnpm sync && cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew assembleDebug -q",
+    "release:android": "pnpm sync && cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21) ./gradlew --no-daemon -q bundleRelease && echo android/app/build/outputs/bundle/release/app-release.aab",
+    "release:ios": "pnpm sync && cd ios/App && xcodebuild -project App.xcodeproj -scheme App -configuration Release -destination generic/platform=iOS -archivePath build/Downhill.xcarchive -allowProvisioningUpdates -quiet archive && xcodebuild -exportArchive -archivePath build/Downhill.xcarchive -exportOptionsPlist ExportOptions.plist -exportPath build/export -allowProvisioningUpdates -quiet && echo ios/App/build/export/App.ipa"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.2",

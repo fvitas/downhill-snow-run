@@ -23,5 +23,7 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <!-- Android 12+ draws its own splash from this, so it has to match the boot blue too. -->
+        <item name="windowSplashScreenBackground">#0a4478</item>
     </style>
 </resources>

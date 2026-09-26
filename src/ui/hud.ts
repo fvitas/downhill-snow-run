@@ -394,8 +394,8 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       crashSite.style.borderColor = 'transparent'
       crashSite.style.color = theme.ink
       crashSite.style.boxShadow = `0 6px 16px ${withAlpha(theme.ink, 0.16)}`
-      // A wall hit has no obstacle to inspect — the inspector would open on bare piste.
-      const inspectable = !state.finished && state.lastHit?.kind !== 'wall'
+      // A playtest tool, so release builds never offer it. A wall hit has nothing to inspect either.
+      const inspectable = import.meta.env.DEV && !state.finished && state.lastHit?.kind !== 'wall'
       crashSite.style.display = inspectable ? 'block' : 'none'
       menu.style.color = theme.ink
 
