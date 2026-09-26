@@ -5,6 +5,7 @@ import { drawChips, drawGhostTrail, drawHelmetOn, drawPickup, drawShards, ghostA
 import { treeHitExtents } from './scoring.ts'
 import { finishY, type GameState, type Hazard, type ParticleKind, type Tree } from './state.ts'
 import { visibleRocks } from './rocks.ts'
+import { setting } from './settings.ts'
 import { axisAngle, drawStone, ROCK_PALETTE, stoneFor } from './stone.ts'
 import { LOGICAL_WIDTH, viewHeight } from './viewport.ts'
 
@@ -270,7 +271,7 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   ctx.fillRect(0, 0, LOGICAL_WIDTH, viewHeight())
 
   ctx.save()
-  if (state.shake > 0 && !state.inspect.on) {
+  if (state.shake > 0 && !state.inspect.on && setting('shake')) {
     const kick = state.shake * SHAKE_PX
     ctx.translate((Math.random() - 0.5) * kick, (Math.random() - 0.5) * kick)
   }

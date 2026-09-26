@@ -1,5 +1,5 @@
 import { SplashScreen } from '@capacitor/splash-screen'
-import { createElement, LockKeyhole } from 'lucide'
+import { createElement, LockKeyhole, Settings } from 'lucide'
 import 'number-flow'
 import { LEVEL_COUNT, LEVELS_PER_WORLD, levelAt } from '../game/levels.ts'
 import { recordOf, totalScore, type Progress } from '../game/progress.ts'
@@ -64,7 +64,10 @@ const loadProps = async (slug: string): Promise<PropPlacement[]> => {
   }
 }
 
-export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
+export const createLevelMap = (
+  onPlay: (level: number) => void,
+  onSettings: () => void,
+): LevelMap => {
   const root = div('absolute inset-0 z-20 flex flex-col overflow-hidden bg-[#0a4478]')
   root.style.display = 'none'
 
@@ -138,7 +141,17 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
   totalLabel.textContent = 'total'
   totalPill.append(totalValue, totalLabel)
 
-  hud.append(who, totalPill)
+  const gear = document.createElement('button')
+  gear.type = 'button'
+  gear.ariaLabel = 'Settings'
+  gear.dataset.ui = ''
+  gear.className =
+    'pointer-events-auto flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full ' +
+    'bg-white/[0.16] backdrop-blur-md transition-transform duration-150 ease-out active:scale-[0.92]'
+  gear.append(createElement(Settings, { width: 17, height: 17, 'stroke-width': 2.5 }))
+  gear.addEventListener('click', onSettings)
+
+  hud.append(who, totalPill, gear)
 
   // Once the current level scrolls out of view, a pill at the bottom says where it went.
   const jump = document.createElement('button')

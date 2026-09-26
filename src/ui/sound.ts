@@ -1,3 +1,4 @@
+import { setting } from '../game/settings.ts'
 import type { Cue } from '../game/state.ts'
 
 type SoundName = 'gate' | 'jump' | 'land' | 'pickup' | 'save' | 'penalty' | 'crash' | 'click'
@@ -63,7 +64,7 @@ export const initSound = (): void => {
 
 const play = (name: SoundName, gain: number, jitter: number): void => {
   const buffer = buffers.get(name)
-  if (!context || context.state !== 'running' || !buffer) return
+  if (!setting('sound') || !context || context.state !== 'running' || !buffer) return
   const source = context.createBufferSource()
   source.buffer = buffer
   source.playbackRate.value = 1 + (Math.random() * 2 - 1) * jitter

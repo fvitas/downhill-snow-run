@@ -1,4 +1,5 @@
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
+import { setting } from '../game/settings.ts'
 import type { Cue } from '../game/state.ts'
 
 const impact = (style: ImpactStyle) => (): Promise<void> => Haptics.impact({ style })
@@ -20,5 +21,6 @@ const HAPTICS: Record<Cue, (() => Promise<void>) | null> = {
 }
 
 export const playHaptics = (cues: readonly Cue[]): void => {
+  if (!setting('haptics')) return
   for (const cue of new Set(cues)) void HAPTICS[cue]?.().catch(() => undefined)
 }

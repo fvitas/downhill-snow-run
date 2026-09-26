@@ -42,6 +42,7 @@ import { createHud, type Hud, type HudActions } from './ui/hud.ts'
 import { createInspector } from './ui/inspect.ts'
 import { createLevelMap } from './ui/map.ts'
 import { playHaptics } from './ui/haptics.ts'
+import { createQuickToggles, createSettingsSheet } from './ui/settings.ts'
 import { initSound, playClick, playSounds } from './ui/sound.ts'
 import { createTuningPanel } from './ui/sliders.ts'
 
@@ -121,8 +122,11 @@ export const createGame = (mount: GameMount): Game => {
     }
 
   const retry = clicked(() => play(state.level.index))
-  const map = createLevelMap(clicked(play))
-  const pauseControl = attachPause(state, overlay, overlayMessage)
+  const settingsSheet = createSettingsSheet()
+  const map = createLevelMap(clicked(play), clicked(settingsSheet.open))
+  const quickToggles = createQuickToggles()
+  overlay.append(quickToggles)
+  const pauseControl = attachPause(state, overlay, overlayMessage, quickToggles)
 
   const hud = (mount.hud ?? createHud)(state, {
     onRetry: retry,
@@ -138,7 +142,14 @@ export const createGame = (mount: GameMount): Game => {
   // Twelve sliders that can break the game — a playtest tool, never shipped.
   const panel = (mount.tuningPanel ?? import.meta.env.DEV) ? createTuningPanel(state) : null
   // Confetti sits over the finish card but under the map, which covers the whole stage.
-  stage.append(hud.root, confetti.root, map.root, ...(panel ? [panel.root] : []), inspector.root)
+  stage.append(
+    hud.root,
+    confetti.root,
+    map.root,
+    settingsSheet.root,
+    ...(panel ? [panel.root] : []),
+    inspector.root,
+  )
 
   attachInput(state, stage)
   void tryLockPortrait()

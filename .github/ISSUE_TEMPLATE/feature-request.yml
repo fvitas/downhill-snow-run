@@ -1,0 +1,16 @@
+name: Request a feature
+description: Suggest an idea for Downhill
+title: 'Feature: '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like Downhill to do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it make the game better?
+      description: What it adds, or the moment in a run where you'd want it
