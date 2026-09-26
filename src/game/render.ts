@@ -222,10 +222,14 @@ const drawHitboxes = (ctx: CanvasRenderingContext2D, state: GameState, camY: num
   ctx.stroke()
 }
 
+// At reveal 0 the focus is the screen centre and the transform is the identity, so the view starts
+// exactly on the frozen slope the end card was covering.
 const applyInspect = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
-  const { zoom, panX, panY } = state.inspect
-  const focusX = state.lastHit?.ball.x ?? state.x
-  const focusY = (state.lastHit?.ball.y ?? state.y) - camY
+  const { zoom, reveal, panX, panY } = state.inspect
+  const ballX = state.lastHit?.ball.x ?? state.x
+  const ballY = (state.lastHit?.ball.y ?? state.y) - camY
+  const focusX = LOGICAL_WIDTH / 2 + (ballX - LOGICAL_WIDTH / 2) * reveal
+  const focusY = viewHeight() / 2 + (ballY - viewHeight() / 2) * reveal
   ctx.translate(LOGICAL_WIDTH / 2 + panX, viewHeight() / 2 + panY)
   ctx.scale(zoom, zoom)
   ctx.translate(-focusX, -focusY)
@@ -303,9 +307,10 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   drawShards(ctx, state, camY)
 
   drawPops(ctx, state, camY)
-  if (state.inspect.on) drawHitboxes(ctx, state, camY)
+  // The hitboxes are a playtest tool, so players see the slope alone.
+  if (state.inspect.on && import.meta.env.DEV) drawHitboxes(ctx, state, camY)
   ctx.restore()
-  drawChips(ctx, state)
+  if (!state.inspect.on) drawChips(ctx, state)
 }
 
 export const stepEffects = (state: GameState, dt: number): void => {

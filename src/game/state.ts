@@ -54,7 +54,9 @@ export type HitRecord = {
   tree: { x: number; y: number; radius: number; rx: number; ry: number } | null
 }
 
-export type InspectState = { on: boolean; zoom: number; panX: number; panY: number }
+// `zoom` and `reveal` ease towards `target` and 1, so opening glides from the frozen slope onto the
+// ball and every zoom step slides rather than cuts.
+export type InspectState = { on: boolean; zoom: number; target: number; reveal: number; panX: number; panY: number }
 
 export type Screen = 'map' | 'run'
 
@@ -203,7 +205,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     helmetBreak: null,
     lastHit: null,
     hitTree: null,
-    inspect: { on: false, zoom: 8, panX: 0, panY: 0 },
+    inspect: { on: false, zoom: 1, target: 1, reveal: 0, panX: 0, panY: 0 },
     trees: course.trees,
     treeFrom: 0,
     treeTo: 0,
@@ -282,4 +284,13 @@ export const resetRun = (state: GameState): void => {
   for (const rock of state.course.rocks) resetRock(rock)
   for (const hazard of state.course.hazards) resetHazard(hazard)
   for (const pickup of state.course.pickups) pickup.taken = false
+}
+
+const INSPECT_EASE = 7
+
+export const stepInspect = (state: GameState, dt: number): void => {
+  const inspect = state.inspect
+  const blend = 1 - Math.exp(-INSPECT_EASE * dt)
+  inspect.zoom += (inspect.target - inspect.zoom) * blend
+  inspect.reveal += (1 - inspect.reveal) * blend
 }

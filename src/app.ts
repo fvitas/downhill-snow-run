@@ -28,6 +28,7 @@ import {
   runOver,
   scoreDistance,
   startLevel,
+  stepInspect,
   COUNTDOWN_SECONDS,
   COUNTDOWN_TICK_SECONDS,
   type GameState,
@@ -87,7 +88,7 @@ export const createGame = (mount: GameMount): Game => {
   let reachSaved = false
 
   const { ctx } = createViewport(canvas, mount.host)
-  const inspector = createInspector(state)
+  const inspector = createInspector(state, () => retry())
   const confetti = createConfetti()
 
   const openMap = (): void => {
@@ -119,11 +120,12 @@ export const createGame = (mount: GameMount): Game => {
       action(...args)
     }
 
+  const retry = clicked(() => play(state.level.index))
   const map = createLevelMap(clicked(play))
   const pauseControl = attachPause(state, overlay, overlayMessage)
 
   const hud = (mount.hud ?? createHud)(state, {
-    onRetry: clicked(() => play(state.level.index)),
+    onRetry: retry,
     onNext: clicked(() => play(state.level.index + 1)),
     onCrashSite: clicked(inspector.open),
     onMenu: clicked(openMap),
@@ -228,6 +230,7 @@ export const createGame = (mount: GameMount): Game => {
       stepParticles(state, dt)
       stepEffects(state, dt)
     }
+    if (state.inspect.on) stepInspect(state, dt)
 
     if (state.cues.length > 0) {
       playSounds(state.cues)
