@@ -415,6 +415,8 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
   }
 
   const syncProps = (): void => {
+    // Until the first layout the tiles are 0 tall, and the tile loop below would never end.
+    if (bodyH <= 0) return
     const scale = stageW / PLATE_W
     const from = scroller.scrollTop - PROP_MARGIN
     const to = scroller.scrollTop + scroller.clientHeight + PROP_MARGIN
@@ -533,7 +535,8 @@ export const createLevelMap = (onPlay: (level: number) => void): LevelMap => {
   // ---- layout ---------------------------------------------------------------------------------
 
   const layout = (): void => {
-    if (!head || !body) return
+    // A hidden map measures 0 wide; `show` lays it out again once it is on screen.
+    if (!head || !body || scroller.clientWidth === 0) return
     stageW = Math.round(scroller.clientWidth)
     headH = Math.round(stageW * (head.h / head.w))
     bodyH = Math.round(stageW * (body.h / body.w))
