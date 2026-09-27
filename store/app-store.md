@@ -108,4 +108,4 @@ Answer **None** to every content question and **No** to every capability questio
 - **Your phone:** an iPhone 14 Pro Max, 15 Plus, 15 Pro Max or 16 Plus captures exactly that size. Take them on the phone with side button plus volume up.
 - **Other sizes:** App Store Connect scales the 6.9" set down for smaller iPhones. The app is iPhone only, so no iPad set is needed.
 - **Count:** 3 to 10. A good set is the map, an early run, a run with a power-up, a busy late-world run and the finish card.
-- Drop them in `store/screenshots/ios/`.
+- The finished set is in `mockups/store/screenshots/ios/`, at 1320 × 2868.

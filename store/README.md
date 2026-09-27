@@ -8,9 +8,9 @@ Everything the stores ask for lives in this folder.
 | `google-play.md` | Play Console texts, data safety, content rating and target audience |
 | `privacy-policy.md` / `.html` | The privacy policy both stores require a public address for; the stores link the `.md` on GitHub |
 | `support.html` | The support page App Store Connect requires |
-| `feature-graphic.png` | Play's 1024 × 500 feature graphic, rendered from `feature-graphic.html` |
-| `crop-for-play.sh` | Turns iPhone screenshots into Play-sized ones |
-| `screenshots/ios/`, `screenshots/play/` | Where the screenshots go |
+| `feature-graphic.png` | Play's 1024 × 500 feature graphic |
+
+The screenshots, the pages that render them and the Play crop script live in `mockups/store/`, which git ignores.
 
 ## 1. Back up the Android upload key first
 
@@ -36,13 +36,13 @@ The address then looks like `https://<user>.github.io/downhill-site/support.html
 
 ## 3. Take screenshots
 
-Take 5 or 6 on the iPhone 14 Pro Max with side button plus volume up. Put them in `screenshots/ios/`.
+The App Store set is rendered from `mockups/store/screenshots.html` into `mockups/store/screenshots/ios/`.
 
 ```sh
-store/crop-for-play.sh
+mockups/store/crop-for-play.sh
 ```
 
-The script writes the Play copies to `screenshots/play/`.
+The script writes the Play copies to `mockups/store/screenshots/play/`.
 
 ## 4. Build
 

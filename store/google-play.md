@@ -52,9 +52,9 @@ No internet needed, no ads, no accounts and no tracking. Your progress stays on 
 | --- | --- | --- |
 | App icon | `assets/play-store-512.png` | 512 × 512 PNG, 32-bit, up to 1 MB |
 | Feature graphic | `store/feature-graphic.png` | 1024 × 500 PNG or JPEG, no alpha |
-| Phone screenshots | `store/screenshots/play/` | 2 to 8, JPEG or PNG, longest side at most twice the shortest |
+| Phone screenshots | `mockups/store/screenshots/play/` | 2 to 8, JPEG or PNG, longest side at most twice the shortest |
 
-iPhone screenshots are 1290 × 2796, which is taller than 2:1. Run `store/crop-for-play.sh` to make Play copies.
+iPhone screenshots are 1320 × 2868, which is taller than 2:1. Run `mockups/store/crop-for-play.sh` to make Play copies.
 
 ## App content, the Policy section
 
