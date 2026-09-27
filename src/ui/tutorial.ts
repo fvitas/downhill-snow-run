@@ -6,12 +6,9 @@ import { LOGICAL_WIDTH } from '../game/viewport.ts'
 import { applyGlass, applySolid, GLASS, PRESS, withAlpha } from './glass.ts'
 import { playClick } from './sound.ts'
 
-const LESSONS = 2
 // A trunk or the edge this close on the current heading slows the run and asks for the tap.
 const DANGER_AHEAD_PX = 260
 const SLOW_MOTION = 0.2
-// The next lesson waits this far down the slope, so a flip into more trouble isn't another stall.
-const LESSON_GAP_PX = 150
 const TOAST_MS = 1_400
 
 const TIPS: readonly [IconNode, string, string][] = [
@@ -96,8 +93,8 @@ const createCard = (onClose: () => void): HTMLElement => {
 
 export type Tutorial = {
   root: HTMLElement
-  // Every level start calls this; only level 1 passes `active`.
-  start: (active: boolean) => void
+  // Every level start calls this; only level 1 passes `active`, and a retry skips the tips.
+  start: (active: boolean, tips: boolean) => void
   // The tips card keeps the countdown from starting until it is dismissed.
   holding: () => boolean
   timeScale: () => number
@@ -125,10 +122,9 @@ export const createTutorial = (state: GameState, canvas: HTMLCanvasElement): Tut
 
   let active = false
   let card: HTMLElement | null = null
-  let lessons = 0
+  let taught = false
   let slow = false
   let slowDirection = state.direction
-  let lastLessonY = -Infinity
   let toastTimer = 0
 
   const showCoach = (on: boolean): void => {
@@ -163,16 +159,15 @@ export const createTutorial = (state: GameState, canvas: HTMLCanvasElement): Tut
 
   return {
     root,
-    start: (next) => {
+    start: (next, tips) => {
       active = next
-      lessons = 0
+      taught = false
       slow = false
-      lastLessonY = -Infinity
       clearTimeout(toastTimer)
       toast.style.display = 'none'
       showCoach(false)
       closeCard()
-      if (active) {
+      if (active && tips) {
         card = createCard(closeCard)
         root.append(card)
       }
@@ -188,16 +183,9 @@ export const createTutorial = (state: GameState, canvas: HTMLCanvasElement): Tut
         slow = false
       } else if (slow && state.direction !== slowDirection) {
         slow = false
-        lessons += 1
-        lastLessonY = state.y
-        say(lessons >= LESSONS ? 'You’ve got it!' : 'Nice!')
-      } else if (
-        !slow &&
-        lessons < LESSONS &&
-        runActive(state) &&
-        state.y - lastLessonY > LESSON_GAP_PX &&
-        headingIntoTrouble(state)
-      ) {
+        taught = true
+        say('You’ve got it!')
+      } else if (!slow && !taught && runActive(state) && headingIntoTrouble(state)) {
         slow = true
         slowDirection = state.direction
       }

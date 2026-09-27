@@ -101,7 +101,7 @@ export const createGame = (mount: GameMount): Game => {
     map.show(progress, state.level.index, hud.scoreAnchor?.())
   }
 
-  const play = (levelIndex: number): void => {
+  const play = (levelIndex: number, again = false): void => {
     const index = clampLevelIndex(levelIndex)
     // The tapped button keeps focus otherwise, and input.ts ignores keys aimed at UI.
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
@@ -110,7 +110,7 @@ export const createGame = (mount: GameMount): Game => {
     inspector.close()
     confetti.reset()
     startLevel(state, index)
-    tutorial.start(index === 1)
+    tutorial.start(index === 1, !again)
     const record = recordOf(progress, index)
     state.bestScore = record.score
     state.bestReach = record.reach
@@ -124,7 +124,7 @@ export const createGame = (mount: GameMount): Game => {
       action(...args)
     }
 
-  const retry = clicked(() => play(state.level.index))
+  const retry = clicked(() => play(state.level.index, true))
   const settingsSheet = createSettingsSheet()
   const map = createLevelMap(clicked(play), clicked(settingsSheet.open))
   const pauseControl = attachPause(state, overlay, overlayMessage)
