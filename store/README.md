@@ -6,8 +6,8 @@ Everything the stores ask for lives in this folder.
 | --- | --- |
 | `app-store.md` | App Store Connect texts, privacy answers and age rating |
 | `google-play.md` | Play Console texts, data safety, content rating and target audience |
-| `privacy-policy.md` / `.html` | The privacy policy both stores require a public address for; the stores link the `.md` on GitHub |
-| `support.html` | The support page App Store Connect requires |
+| `privacy-policy.md` / `.html` | The privacy policy both stores require a public address for; published to GitHub Pages |
+| `support.html` | The support page App Store Connect requires, published to GitHub Pages |
 | `feature-graphic.png` | Play's 1024 × 500 feature graphic |
 
 The screenshots, the pages that render them and the Play crop script live in `mockups/store/`, which git ignores.
@@ -20,19 +20,14 @@ The key is `android/upload-keystore.jks`, and its passwords are in `android/keys
 - Losing them means asking Google support for an upload key reset, which takes days.
 - Enrol in Play App Signing when creating the first release. Google then holds the real app signing key.
 
-## 2. Host the policy and support pages
+## 2. The policy and support pages
 
-Both stores need public addresses.
+Both stores need public addresses. `.github/workflows/pages.yml` publishes both pages to GitHub Pages on every push to main that changes them:
 
-The privacy policy is served from this public repo on GitHub, so it needs no hosting: `https://github.com/fvitas/downhill-snow-run/blob/main/store/privacy-policy.md`. Edit `privacy-policy.md` and push to change it, and keep `privacy-policy.html` in step.
+- Support: https://fvitas.github.io/downhill-snow-run/support.html
+- Privacy policy: https://fvitas.github.io/downhill-snow-run/privacy-policy.html
 
-The support page still needs a host. The simplest free option is GitHub Pages:
-
-1. Create a public repo, for example `downhill-site`.
-2. Copy `support.html` into it.
-3. Turn on Pages in the repo settings.
-
-The address then looks like `https://<user>.github.io/downhill-site/support.html`.
+Edit `privacy-policy.html` and keep `privacy-policy.md` in step, since the repo README links the `.md`.
 
 ## 3. Take screenshots
 

@@ -54,11 +54,11 @@ No internet needed, no ads, no accounts and no tracking. Your progress stays on 
 ski,skiing,snow,slalom,winter,mountain,downhill,one tap,arcade,endless,runner,offline,casual,slope
 ```
 
-**Support URL:** host `store/support.html`, then paste its address. See the release checklist.
+**Support URL:** https://fvitas.github.io/downhill-snow-run/support.html
 
 **Marketing URL:** optional. Leave empty.
 
-**Privacy Policy URL:** https://github.com/fvitas/downhill-snow-run/blob/main/store/privacy-policy.md
+**Privacy Policy URL:** https://fvitas.github.io/downhill-snow-run/privacy-policy.html
 
 **Copyright:** `2026 Filip Vitas`
 
