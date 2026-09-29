@@ -6,7 +6,7 @@ import {
   type GameState,
 } from '../game/state.ts'
 import { UI_THEME } from '../game/themes.ts'
-import { applyGlass, applySolid, GLASS, PRESS, isDarkTheme, withAlpha } from './glass.ts'
+import { applyGlass, applySolid, GLASS, GLASS_EDGE, PRESS, isDarkTheme, withAlpha } from './glass.ts'
 import { formatPoints } from './points.ts'
 import { createPowerBadges } from './powers.ts'
 
@@ -89,7 +89,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   // Out of the header's way and under the thumb that is already holding the phone.
   const pause = button(
     '',
-    `${GLASS} ${PRESS} pointer-events-auto absolute right-4 ` +
+    `${GLASS_EDGE} ${PRESS} pointer-events-auto absolute right-4 ` +
       'bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] flex h-11 w-11 items-center ' +
       'justify-center rounded-full',
     actions.onPause,
@@ -293,7 +293,8 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       header.style.display = showCard || state.inspect.on ? 'none' : 'flex'
       pause.style.display = showCard || counting || state.inspect.on ? 'none' : 'flex'
       powers.update(!showCard && !state.inspect.on)
-      applyGlass(pause, theme)
+      // Without the blur the slope shows through sharp, so the tint is denser.
+      applyGlass(pause, theme, { alpha: isDarkTheme(theme) ? 0.66 : 0.78 })
       pause.style.color = theme.ink
 
       for (const row of [ghostRow, barRow, badgeRow]) row.style.display = level.endless ? 'none' : ''

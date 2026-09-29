@@ -4,10 +4,13 @@ import type { Theme } from '../game/themes.ts'
 // sheen. The sheen sits on -z-10 so it washes the background but never the text on top of it.
 // Callers must position the element themselves (relative or absolute): the sheen is an
 // absolutely positioned pseudo-element and needs this box as its containing block.
-export const GLASS =
-  'isolate overflow-hidden border backdrop-blur-xl backdrop-saturate-150 ' +
+export const GLASS_EDGE =
+  'isolate overflow-hidden border ' +
   'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 ' +
   "before:h-1/2 before:bg-gradient-to-b before:from-white/55 before:to-transparent before:content-['']"
+
+// Over the moving slope a backdrop blur is redone every frame, so controls there take GLASS_EDGE.
+export const GLASS = `${GLASS_EDGE} backdrop-blur-xl backdrop-saturate-150`
 
 export const PRESS = 'transition-transform duration-150 ease-out active:scale-[0.96]'
 
