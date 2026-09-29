@@ -1,3 +1,4 @@
+import { createElement, Settings } from 'lucide'
 import { rateRun } from '../game/levels.ts'
 import {
   COUNTDOWN_TICK_SECONDS,
@@ -16,6 +17,7 @@ export type HudActions = {
   onMenu: () => void
   onNext: () => void
   onPause: () => void
+  onSettings: () => void
 }
 
 // Where the finish card's score sits on screen, so the map can fly the points off it.
@@ -252,8 +254,24 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
     actions.onMenu,
   )
   buttons.append(primary, crashSite, menu)
+
   sheet.append(title, verdict, finalScore, detail, buttons)
-  card.append(sheet)
+
+  // Where the map keeps its gear, so Settings is in the same corner on both screens. A click, not
+  // the pointerdown the other buttons use: a click still to come would land on the sheet's backdrop
+  // and close it again.
+  const gear = document.createElement('button')
+  gear.type = 'button'
+  gear.ariaLabel = 'Settings'
+  gear.dataset.ui = ''
+  gear.className =
+    'absolute right-4 top-[calc(max(env(safe-area-inset-top),2.75rem)+0.95rem)] flex h-[35px] ' +
+    'w-[35px] items-center justify-center rounded-full bg-white/[0.16] text-white backdrop-blur-md ' +
+    'transition-transform duration-150 ease-out active:scale-[0.92]'
+  gear.append(createElement(Settings, { width: 19, height: 19, 'stroke-width': 2.5, 'aria-hidden': 'true' }))
+  gear.addEventListener('click', actions.onSettings)
+
+  card.append(sheet, gear)
 
   const countdown = document.createElement('div')
   countdown.className = 'absolute inset-0 flex items-center justify-center'

@@ -135,6 +135,7 @@ export const createGame = (mount: GameMount): Game => {
     onCrashSite: clicked(inspector.open),
     onMenu: clicked(openMap),
     onPause: clicked(pauseControl.pause),
+    onSettings: clicked(settingsSheet.open),
   })
 
   preloadSprites()
