@@ -1,4 +1,4 @@
-const SETTING_KEYS = ['sound', 'haptics', 'shake'] as const
+const SETTING_KEYS = ['sound', 'haptics', 'shake', 'fpsCap'] as const
 
 export type SettingKey = (typeof SETTING_KEYS)[number]
 export type Settings = Record<SettingKey, boolean>
@@ -10,6 +10,8 @@ const defaults = (): Settings => ({
   haptics: true,
   // A player who asked the OS for less motion starts without the crash shake.
   shake: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  // Budget Android phones with 90 Hz panels judder uncapped; only Android shows the switch.
+  fpsCap: true,
 })
 
 const load = (): Settings => {

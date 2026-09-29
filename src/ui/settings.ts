@@ -5,6 +5,7 @@ import {
   Bug,
   ChevronRight,
   createElement,
+  Gauge,
   Lightbulb,
   Star,
   Vibrate,
@@ -15,6 +16,7 @@ import {
 import { version } from '../../package.json'
 import { setSetting, setting, watchSettings, type SettingKey } from '../game/settings.ts'
 import { UI_THEME } from '../game/themes.ts'
+import { hasFpsCap } from './fps-cap.ts'
 import { applyGlass, GLASS, PRESS, withAlpha } from './glass.ts'
 import { playClick } from './sound.ts'
 
@@ -44,6 +46,7 @@ const TOGGLES: readonly { key: SettingKey; label: string; on: IconNode }[] = [
   { key: 'sound', label: 'Sound', on: Volume2 },
   { key: 'haptics', label: 'Haptics', on: Vibrate },
   { key: 'shake', label: 'Shake on crash', on: Activity },
+  ...(hasFpsCap ? [{ key: 'fpsCap' as const, label: 'Limit to 60 fps', on: Gauge }] : []),
 ]
 
 // The click is silent once sound is off. Turning haptics on answers with a buzz, so it is felt.

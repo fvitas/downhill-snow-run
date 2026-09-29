@@ -1,5 +1,6 @@
 import './style.css'
 import { createGame } from './app.ts'
+import { startFpsCap } from './ui/fps-cap.ts'
 
 const stage = document.querySelector<HTMLElement>('#stage')
 const canvas = document.querySelector<HTMLCanvasElement>('#game')
@@ -9,5 +10,6 @@ const overlayMessage = document.querySelector<HTMLElement>('#overlay-message')
 if (!stage || !canvas || !overlay || !overlayMessage) throw new Error('Missing stage markup')
 
 const game = createGame({ stage, canvas, overlay, overlayMessage })
+startFpsCap()
 
 if (import.meta.env.DEV) Reflect.set(window, 'ski', game.state)
