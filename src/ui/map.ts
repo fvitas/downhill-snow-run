@@ -126,18 +126,18 @@ export const createLevelMap = (
   )
 
   const who = div('min-w-0 grow')
-  const hudWorld = div('text-[0.95rem] font-extrabold tracking-[0.06em]')
-  const hudSub = div('text-[0.7rem] font-semibold tracking-[0.04em] opacity-70')
+  const hudWorld = div('text-[1.1rem] font-extrabold tracking-[0.06em]')
+  const hudSub = div('text-[0.78rem] font-semibold tracking-[0.04em] opacity-70')
   who.append(hudWorld, hudSub)
 
   const totalPill = div(
-    'flex shrink-0 items-baseline gap-1.5 rounded-full bg-white/[0.16] px-3 py-1.5 ' +
+    'flex shrink-0 items-baseline gap-1.5 rounded-full bg-white/[0.16] px-3 py-[7px] ' +
       'font-extrabold backdrop-blur-md',
   )
   const totalValue = document.createElement('number-flow')
-  totalValue.className = 'text-[0.8rem] tabular-nums'
+  totalValue.className = 'text-[0.9rem] tabular-nums'
   totalValue.locales = POINTS_LOCALE
-  const totalLabel = div('text-[0.6rem] uppercase tracking-[0.08em] opacity-70')
+  const totalLabel = div('text-[11px] uppercase tracking-[0.08em] opacity-70')
   totalLabel.textContent = 'total'
   totalPill.append(totalValue, totalLabel)
 
@@ -146,9 +146,9 @@ export const createLevelMap = (
   gear.ariaLabel = 'Settings'
   gear.dataset.ui = ''
   gear.className =
-    'pointer-events-auto flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full ' +
+    'pointer-events-auto flex h-[35px] w-[35px] shrink-0 items-center justify-center rounded-full ' +
     'bg-white/[0.16] backdrop-blur-md transition-transform duration-150 ease-out active:scale-[0.92]'
-  gear.append(createElement(Settings, { width: 17, height: 17, 'stroke-width': 2.5 }))
+  gear.append(createElement(Settings, { width: 19, height: 19, 'stroke-width': 2.5 }))
   gear.addEventListener('click', onSettings)
 
   hud.append(who, totalPill, gear)
