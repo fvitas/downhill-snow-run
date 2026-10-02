@@ -47,4 +47,4 @@ The release checklist and store listings are in [store/README.md](store/README.m
 
 ## License
 
-Copyright © 2026 Filip Vitas. All rights reserved. The source is public to read, not to reuse: see [LICENSE](LICENSE).
+The code is under the [PolyForm Strict License 1.0.0](LICENSE): free to read, and to run for personal or noncommercial use, but not to change, share or sell. The art, sounds, levels and the Downhill: Snow Run name are all rights reserved.
