@@ -482,7 +482,8 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
         secondary.style.color = theme.ink
         secondary.style.boxShadow = `0 6px 16px ${withAlpha(theme.ink, 0.16)}`
       }
-      crashSite.style.background = '#dbeafe'
+      crashSite.style.background = withAlpha(theme.ink, 0.07)
+      crashSite.style.boxShadow = `0 2px 6px ${withAlpha(theme.ink, 0.1)}`
       // A wall hit has nothing to look at: the edge is the whole screen's side.
       const inspectable = !state.finished && state.lastHit !== null && state.lastHit.kind !== 'wall'
       crashSite.style.display = inspectable ? 'block' : 'none'
