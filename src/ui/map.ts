@@ -1,5 +1,5 @@
 import { SplashScreen } from '@capacitor/splash-screen'
-import { createElement, LockKeyhole, Settings } from 'lucide'
+import { createElement, LockKeyhole, Palette, Settings, type IconNode } from 'lucide'
 import 'number-flow'
 import { LEVEL_COUNT, LEVELS_PER_WORLD, levelAt } from '../game/levels.ts'
 import { recordOf, totalScore, type Progress } from '../game/progress.ts'
@@ -67,6 +67,7 @@ const loadProps = async (slug: string): Promise<PropPlacement[]> => {
 export const createLevelMap = (
   onPlay: (level: number) => void,
   onSettings: () => void,
+  onLocker: () => void,
 ): LevelMap => {
   const root = div('absolute inset-0 z-20 flex flex-col overflow-hidden bg-[#0a4478]')
   root.style.display = 'none'
@@ -141,17 +142,20 @@ export const createLevelMap = (
   totalLabel.textContent = 'total'
   totalPill.append(totalValue, totalLabel)
 
-  const gear = document.createElement('button')
-  gear.type = 'button'
-  gear.ariaLabel = 'Settings'
-  gear.dataset.ui = ''
-  gear.className =
-    'pointer-events-auto flex h-[35px] w-[35px] shrink-0 items-center justify-center rounded-full ' +
-    'bg-white/[0.16] backdrop-blur-md transition-transform duration-150 ease-out active:scale-[0.92]'
-  gear.append(createElement(Settings, { width: 19, height: 19, 'stroke-width': 2.5 }))
-  gear.addEventListener('click', onSettings)
+  const roundButton = (label: string, node: IconNode, onClick: () => void): HTMLButtonElement => {
+    const element = document.createElement('button')
+    element.type = 'button'
+    element.ariaLabel = label
+    element.dataset.ui = ''
+    element.className =
+      'pointer-events-auto flex h-[35px] w-[35px] shrink-0 items-center justify-center rounded-full ' +
+      'bg-white/[0.16] backdrop-blur-md transition-transform duration-150 ease-out active:scale-[0.92]'
+    element.append(createElement(node, { width: 19, height: 19, 'stroke-width': 2.5 }))
+    element.addEventListener('click', onClick)
+    return element
+  }
 
-  hud.append(who, totalPill, gear)
+  hud.append(who, totalPill, roundButton('Locker', Palette, onLocker), roundButton('Settings', Settings, onSettings))
 
   // Once the current level scrolls out of view, a pill at the bottom says where it went.
   const jump = document.createElement('button')

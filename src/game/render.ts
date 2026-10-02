@@ -1,32 +1,47 @@
 import { drawHazardOver, drawHazardStanding, drawHazardUnder, hazardReach } from './hazard-art.ts'
 import { airPose, type AirPose } from './hazards.ts'
+import { looks } from './looks.ts'
 import { drawPine, drawShadow } from './pine.ts'
 import { drawGhostTrail, drawHelmetOn, drawPickup, drawShards, ghostAlpha } from './power-art.ts'
 import { treeHitExtents } from './scoring.ts'
 import { finishY, type GameState, type Hazard, type ParticleKind, type Tree } from './state.ts'
 import { visibleRocks } from './rocks.ts'
 import { setting } from './settings.ts'
+import { paintBall, tintOf, type BallEnv } from './skins.ts'
 import { axisAngle, drawStone, ROCK_PALETTE, stoneFor } from './stone.ts'
+import { drawTrailFront, drawTrailFx, drawTrailPath, RAINBOW_HUE_PER_PX, trailHead, type TrailEnv } from './trails.ts'
 import { LOGICAL_WIDTH, viewHeight } from './viewport.ts'
 
-const drawTrail = (ctx: CanvasRenderingContext2D, state: GameState, camY: number): void => {
-  if (state.trail.length < 2) return
+const ballEnv = (state: GameState): BallEnv => ({
+  theme: state.theme,
+  spin: state.spin,
+  heading: Math.sin(state.angle),
+  t: state.elapsed,
+})
 
-  ctx.strokeStyle = state.theme.trail
-  ctx.lineWidth = state.tuning.ballRadius * 1.05
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  ctx.beginPath()
-
-  const first = state.trail[0]
-  if (!first) return
-  ctx.moveTo(first.x, first.y - camY)
-  for (let i = 1; i < state.trail.length; i += 1) {
-    const point = state.trail[i]
-    if (point) ctx.lineTo(point.x, point.y - camY)
+export const trailEnv = (state: GameState): TrailEnv => {
+  const { ball } = looks()
+  const env = ballEnv(state)
+  return {
+    r: state.tuning.ballRadius,
+    theme: state.theme,
+    tint: tintOf(ball, state.theme),
+    t: state.elapsed,
+    ang: Math.atan2(Math.cos(state.angle), Math.sin(state.angle)),
+    heading: env.heading,
+    hueRate: RAINBOW_HUE_PER_PX,
+    paintBall: (ctx, x, y, r) => paintBall(ctx, ball, x, y, r, env),
   }
-  ctx.lineTo(state.x, state.y - camY)
-  ctx.stroke()
+}
+
+const drawTrail = (ctx: CanvasRenderingContext2D, state: GameState, camY: number, env: TrailEnv): void => {
+  const head = trailHead(state.trail, state.x, state.y)
+  drawTrailPath(ctx, looks().trail, state.trail, head, camY, env)
+  drawTrailFx(ctx, state.trailFx, camY, viewHeight(), env)
+}
+
+const drawTrailOver = (ctx: CanvasRenderingContext2D, state: GameState, camY: number, env: TrailEnv): void => {
+  drawTrailFront(ctx, looks().trail, state.trail, trailHead(state.trail, state.x, state.y), camY, env)
 }
 
 // Already sorted by y in the course, so the window is drawn back to front as it stands.
@@ -141,20 +156,15 @@ const drawBall = (ctx: CanvasRenderingContext2D, state: GameState, camY: number,
   ctx.ellipse(state.x - base * 0.7 - lift * 0.3, screenY + base * 0.45, base * 1.1 * shrink, base * 0.55 * shrink, 0, 0, Math.PI * 2)
   ctx.fill()
 
-  // Blinks after a save, so the shield's half second reads without another chip.
-  if (state.shield > 0 && Math.sin(state.elapsed * 40) > 0) return
+  // Blinks after a save, so the shield's half second reads without another chip. The clock stands
+  // still through a count-in, so the blink waits for the run to start.
+  if (state.shield > 0 && state.started && Math.sin(state.elapsed * 40) > 0) return
 
   const y = screenY - lift
   if (state.ghost > 0) drawGhostTrail(ctx, state, state.x, y)
   ctx.save()
   ctx.globalAlpha = ghostAlpha(state)
-  ctx.fillStyle = state.theme.ball
-  ctx.strokeStyle = state.theme.ballEdge
-  ctx.lineWidth = 2
-  ctx.beginPath()
-  ctx.arc(state.x, y, r, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.stroke()
+  paintBall(ctx, looks().ball, state.x, y, r, ballEnv(state))
   ctx.restore()
   if (state.helmet) drawHelmetOn(ctx, state.x, y, r)
 }
@@ -280,7 +290,8 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   const hazards = visibleHazards(state, camY)
   for (const hazard of hazards) drawHazardUnder(ctx, state, hazard, camY)
   drawFinish(ctx, state, camY)
-  drawTrail(ctx, state, camY)
+  const env = trailEnv(state)
+  drawTrail(ctx, state, camY, env)
   drawParticles(ctx, state, camY, 'spray')
 
   const visible = visibleTrees(state)
@@ -295,7 +306,10 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   }
   // In the air it clears everything on the slope, so it is drawn on top of all of it.
   const air = airPose(state)
-  if (!air?.flying) drawBall(ctx, state, camY, air)
+  if (!air?.flying) {
+    drawBall(ctx, state, camY, air)
+    drawTrailOver(ctx, state, camY, env)
+  }
   // Under the trunk it crashed into: the root sits on the drift, not behind it.
   drawDrift(ctx, state, camY)
   for (const item of items) {
@@ -304,7 +318,10 @@ export const render = (ctx: CanvasRenderingContext2D, state: GameState, camY: nu
   drawParticles(ctx, state, camY, 'clod')
   drawRocks(ctx, state, camY)
   for (const hazard of hazards) drawHazardOver(ctx, state, hazard, camY)
-  if (air?.flying) drawBall(ctx, state, camY, air)
+  if (air?.flying) {
+    drawBall(ctx, state, camY, air)
+    drawTrailOver(ctx, state, camY, env)
+  }
   drawShards(ctx, state, camY)
 
   drawPops(ctx, state, camY)

@@ -89,7 +89,8 @@ export type Hazard = {
 export type Pickup = { x: number; y: number; kind: PowerKind; taken: boolean }
 
 
-export type TrailPoint = { x: number; y: number }
+// d is how far along the run the point was laid, so patterns stay painted on the snow.
+export type TrailPoint = { x: number; y: number; d: number }
 
 // Spray is the dust off the skis; clods are the packed snow a crash throws. Clods fly harder,
 // last longer and draw over the trees, so a wreck behind a trunk still reads.

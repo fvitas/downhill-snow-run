@@ -5,6 +5,7 @@ import { attachInput } from './game/input.ts'
 import { attachPause, tryLockPortrait } from './game/pause.ts'
 import { emitSpray, stepParticles } from './game/particles.ts'
 import { stepPhysics } from './game/physics.ts'
+import { looks } from './game/looks.ts'
 import { clampLevelIndex, extendCourse } from './game/levels.ts'
 import {
   clearedBefore,
@@ -14,7 +15,7 @@ import {
   recordRun,
   saveProgress,
 } from './game/progress.ts'
-import { render, stepEffects } from './game/render.ts'
+import { render, stepEffects, trailEnv } from './game/render.ts'
 import { stepRocks } from './game/rocks.ts'
 import { preloadSprites } from './game/sprites.ts'
 import { render3d } from './game/render3d.ts'
@@ -38,9 +39,12 @@ import { loadTuning } from './game/storage.ts'
 import { updateTerrain } from './game/terrain.ts'
 import { createViewport } from './game/viewport.ts'
 import { themeForWorld } from './game/themes.ts'
+import { spinStep } from './game/skins.ts'
+import { emitTrailFx, stepTrailFx, trailHead } from './game/trails.ts'
 import { createConfetti } from './ui/confetti.ts'
 import { createHud, type Hud, type HudActions } from './ui/hud.ts'
 import { createInspector } from './ui/inspect.ts'
+import { createLocker } from './ui/locker.ts'
 import { createLevelMap } from './ui/map.ts'
 import { playHaptics } from './ui/haptics.ts'
 import { createSettingsSheet } from './ui/settings.ts'
@@ -127,7 +131,8 @@ export const createGame = (mount: GameMount): Game => {
 
   const retry = clicked(() => play(state.level.index, true))
   const settingsSheet = createSettingsSheet()
-  const map = createLevelMap(clicked(play), clicked(settingsSheet.open))
+  const locker = createLocker()
+  const map = createLevelMap(clicked(play), clicked(settingsSheet.open), clicked(locker.open))
   const pauseControl = attachPause(state, overlay, overlayMessage)
 
   const hud = (mount.hud ?? createHud)(state, {
@@ -156,6 +161,7 @@ export const createGame = (mount: GameMount): Game => {
     confetti.root,
     map.root,
     settingsSheet.root,
+    locker.root,
     ...(panel ? [panel.root] : []),
     inspector.root,
   )
@@ -222,11 +228,15 @@ export const createGame = (mount: GameMount): Game => {
 
     const last = state.trail[state.trail.length - 1]
     if (!last || Math.hypot(state.x - last.x, state.y - last.y) > TRAIL_POINT_SPACING) {
-      state.trail.push({ x: state.x, y: state.y })
+      state.trail.push(trailHead(state.trail, state.x, state.y))
     }
     while ((state.trail[0]?.y ?? Infinity) < state.y - TRAIL_TAIL_PX) state.trail.shift()
 
     emitSpray(state, dt)
+    const travelled = Math.hypot(state.x - state.prevX, state.y - state.prevY)
+    const { spin, trail } = looks()
+    state.spin += spinStep(spin, travelled, state.tuning.ballRadius, state.direction)
+    emitTrailFx(state.trailFx, trail, state.x, state.y, travelled, trailEnv(state))
   }
 
   let previous = performance.now()
@@ -248,6 +258,7 @@ export const createGame = (mount: GameMount): Game => {
 
       // Effects outlive the run: the crash burst and the impact hold both keep counting down.
       stepParticles(state, dt)
+      stepTrailFx(state.trailFx, dt)
       stepEffects(state, dt)
     }
     if (state.inspect.on) stepInspect(state, dt)

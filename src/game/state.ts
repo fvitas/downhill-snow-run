@@ -3,6 +3,7 @@ import { buildCourse, levelAt, type Course, type Level } from './levels.ts'
 import { resetHazard } from './hazards.ts'
 import { resetRock } from './rocks.ts'
 import type { Theme } from './themes.ts'
+import { clearTrailFx, createTrailFx, type TrailFx } from './trails.ts'
 import { cameraYFor, LOGICAL_WIDTH } from './viewport.ts'
 import {
   METRES_PER_POINT,
@@ -87,6 +88,8 @@ export type GameState = {
   prevX: number
   prevY: number
   angle: number
+  // How far the ball's pattern has turned, when the Locker's spin is on.
+  spin: number
   direction: 1 | -1
   speed: number
   pressed: boolean
@@ -131,6 +134,7 @@ export type GameState = {
   pops: Pop[]
   wobbles: Wobble[]
   trail: TrailPoint[]
+  trailFx: TrailFx
   particles: Particle[]
   sprayAccumulator: number
   cues: Cue[]
@@ -181,6 +185,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     prevX: LOGICAL_WIDTH / 2,
     prevY: 0,
     angle: 0,
+    spin: 0,
     direction: 1,
     speed: tuning.baseSpeed,
     pressed: false,
@@ -215,6 +220,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     pops: [],
     wobbles: [],
     trail: [],
+    trailFx: createTrailFx(),
     particles: [],
     sprayAccumulator: 0,
     cues: [],
@@ -248,6 +254,7 @@ export const resetRun = (state: GameState): void => {
   state.prevX = state.x
   state.prevY = state.y
   state.angle = 0
+  state.spin = 0
   state.direction = 1
   state.speed = state.tuning.baseSpeed
   state.pressed = false
@@ -280,6 +287,7 @@ export const resetRun = (state: GameState): void => {
   state.pops.length = 0
   state.wobbles.length = 0
   state.trail.length = 0
+  clearTrailFx(state.trailFx)
   state.particles.length = 0
   state.sprayAccumulator = 0
   state.cues.length = 0
