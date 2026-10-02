@@ -1,6 +1,6 @@
 import { LEVEL_COUNT } from './levels.ts'
-import { SKINS, type SkinId } from './skins.ts'
-import { TRAILS, type TrailId } from './trails.ts'
+import { isPremiumSkin, SKINS, type SkinId } from './skins.ts'
+import { isPremiumTrail, TRAILS, type TrailId } from './trails.ts'
 
 export type Look = { kind: 'ball'; id: SkinId } | { kind: 'trail'; id: TrailId }
 
@@ -20,6 +20,9 @@ export const ALL_LOOKS: readonly Look[] = [
 export const lookKey = (look: Look): string => `${look.kind}:${look.id}`
 
 export const isFreeLook = (look: Look): boolean => look.id === 'classic'
+
+// Premium looks never land on the wheel; only Unlock all brings them.
+export const isPremiumLook = (look: Look): boolean => (look.kind === 'ball' ? isPremiumSkin(look.id) : isPremiumTrail(look.id))
 
 export const lookName = (look: Look): string =>
   (look.kind === 'ball' ? SKINS.find((skin) => skin.id === look.id) : TRAILS.find((entry) => entry.id === look.id))

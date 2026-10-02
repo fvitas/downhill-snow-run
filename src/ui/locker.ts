@@ -1,7 +1,7 @@
-import { createElement, LockKeyhole } from 'lucide'
+import { createElement, Crown, LockKeyhole } from 'lucide'
 import { purchaseNotice } from '../game/entitlements.ts'
 import { looks, setLook, SPINS, watchLooks, type Looks } from '../game/looks.ts'
-import { paintBall, SKINS, spinStep, type BallEnv, type BallSpin } from '../game/skins.ts'
+import { paintBall, previewSignals, SKINS, spinStep, type BallEnv, type BallSpin } from '../game/skins.ts'
 import { UI_THEME } from '../game/themes.ts'
 import {
   clearTrailFx,
@@ -15,7 +15,7 @@ import {
   trailHead,
   TRAILS,
 } from '../game/trails.ts'
-import { ALL_LOOKS, lookKey, lookName, watchUnlocks, type Look } from '../game/unlocks.ts'
+import { ALL_LOOKS, isPremiumLook, lookKey, lookName, watchUnlocks, type Look } from '../game/unlocks.ts'
 import type { TrailPoint } from '../game/world.ts'
 import { applySolid, PRESS, withAlpha } from './glass.ts'
 import { drawLookTile, sizedCanvas, trailEnvFor } from './look-tiles.ts'
@@ -30,6 +30,7 @@ const PREVIEW_SPEED = 170
 const POINT_SPACING = 6
 const BALL_TILE = 36
 const TRAIL_TILE = 44
+const PREMIUM_GOLD = '#ca8a04'
 
 const sectionTitle = (text: string): [HTMLDivElement, HTMLSpanElement] => {
   const row = document.createElement('div')
@@ -55,6 +56,12 @@ const tile = (look: Look, size: number, onPick: () => void): Tile => {
   const lock = createElement(LockKeyhole, { width: 11, height: 11, 'stroke-width': 2.75, 'aria-hidden': 'true' })
   lock.setAttribute('class', 'absolute right-1 top-1 opacity-60')
   button.append(canvas, lock)
+  if (isPremiumLook(look)) {
+    const crown = createElement(Crown, { width: 11, height: 11, 'stroke-width': 2.75, 'aria-hidden': 'true' })
+    crown.setAttribute('class', 'absolute left-1 top-1')
+    crown.style.color = PREMIUM_GOLD
+    button.append(crown)
+  }
   button.addEventListener('click', () => {
     playClick()
     onPick()
@@ -138,7 +145,7 @@ export const createLocker = (): Locker => {
     while ((trail[0]?.y ?? Infinity) < camY - 20) trail.shift()
     const { ball, trail: trailId, spin: spinMode } = shown()
     spin += spinStep(spinMode, step, PREVIEW_RADIUS, dx)
-    const ballEnv: BallEnv = { theme: UI_THEME, spin, heading: step > 0 ? dx / step : 0, t: now / 1_000 }
+    const ballEnv: BallEnv = { theme: UI_THEME, spin, heading: step > 0 ? dx / step : 0, t: now / 1_000, ...previewSignals(now / 1_000) }
     const env = trailEnvFor(ball, PREVIEW_RADIUS, RAINBOW_HUE_PER_PX, ballEnv, Math.atan2(dy, dx))
     emitTrailFx(fx, trailId, head.x, head.y, step, env)
     stepTrailFx(fx, dt)

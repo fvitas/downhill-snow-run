@@ -7,7 +7,7 @@ import { treeHitExtents } from './scoring.ts'
 import { finishY, type GameState, type Hazard, type ParticleKind, type Tree } from './state.ts'
 import { visibleRocks } from './rocks.ts'
 import { setting } from './settings.ts'
-import { paintBall, tintOf, type BallEnv } from './skins.ts'
+import { frightOf, heatOf, paintBall, tintOf, type BallEnv } from './skins.ts'
 import { axisAngle, drawStone, ROCK_PALETTE, stoneFor } from './stone.ts'
 import { drawTrailFront, drawTrailFx, drawTrailPath, RAINBOW_HUE_PER_PX, trailHead, type TrailEnv } from './trails.ts'
 import { LOGICAL_WIDTH, viewHeight } from './viewport.ts'
@@ -17,6 +17,8 @@ const ballEnv = (state: GameState): BallEnv => ({
   spin: state.spin,
   heading: Math.sin(state.angle),
   t: state.elapsed,
+  heat: heatOf(state.combo),
+  fright: frightOf(state.elapsed - state.nearMissAt),
 })
 
 export const trailEnv = (state: GameState): TrailEnv => {
@@ -30,6 +32,8 @@ export const trailEnv = (state: GameState): TrailEnv => {
     ang: Math.atan2(Math.cos(state.angle), Math.sin(state.angle)),
     heading: env.heading,
     hueRate: RAINBOW_HUE_PER_PX,
+    heat: env.heat,
+    fright: env.fright,
     paintBall: (ctx, x, y, r) => paintBall(ctx, ball, x, y, r, env),
   }
 }

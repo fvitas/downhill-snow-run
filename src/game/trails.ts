@@ -1,4 +1,8 @@
+import { hash, TAU } from './balls/kit.ts'
 import type { Theme } from './themes.ts'
+import { ants, bees, comboHeat, nearMissSparks, penguins, racingStripes, skate, sparkler, tieDyeBand } from './trails/extra.ts'
+import { behind, between, dot, each, fadeIn, fourPoint, groove, line, offsetLine, pick, resample, rgba, spark } from './trails/kit.ts'
+import { dragon, fairyDust, galaxy, goldRush, kite, neonTube, phoenixTrail, rainbowRoad, rocketExhaust } from './trails/premium.ts'
 import type { TrailPoint } from './world.ts'
 
 export type TrailId =
@@ -22,6 +26,34 @@ export type TrailId =
   | 'echoes'
   | 'ducklings'
   | 'snake'
+  | 'iceblue'
+  | 'shadow'
+  | 'deeppowder'
+  | 'skitracks'
+  | 'snowboard'
+  | 'dotted'
+  | 'racingstripes'
+  | 'tiedye'
+  | 'laser'
+  | 'lightcycle'
+  | 'speedlines'
+  | 'iceskate'
+  | 'sparkler'
+  | 'combo'
+  | 'nearmiss'
+  | 'penguins'
+  | 'bees'
+  | 'ants'
+  | 'train'
+  | 'kite'
+  | 'phoenix'
+  | 'rocket'
+  | 'dragon'
+  | 'rainbowroad'
+  | 'galaxy'
+  | 'goldrush'
+  | 'neon'
+  | 'fairydust'
 
 export type TrailEnv = {
   r: number
@@ -33,10 +65,13 @@ export type TrailEnv = {
   ang: number
   heading: number
   hueRate: number
+  // The ball's run signals, 0–1: see BallEnv.
+  heat: number
+  fright: number
   paintBall: (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => void
 }
 
-type SparkBody = {
+export type SparkBody = {
   x: number
   y: number
   vx: number
@@ -47,6 +82,8 @@ type SparkBody = {
   rot: number
   vr: number
   colour: string
+  // A fixed 0–1 per spark, so each one can wink or flip out of step with the rest.
+  seed: number
 }
 
 // Each spark keeps the trail that threw it, so switching trails doesn't redraw the old ones.
@@ -54,133 +91,36 @@ type Spark = SparkBody & { trail: TrailId }
 
 export type TrailFx = { sparks: Spark[]; carry: number }
 
-type Path = (ctx: CanvasRenderingContext2D, points: readonly TrailPoint[], env: TrailEnv) => void
+export type Path = (ctx: CanvasRenderingContext2D, points: readonly TrailPoint[], env: TrailEnv) => void
 
-type Trail = {
+export type Trail = {
   id: TrailId
   name: string
+  // Premium trails only come with Unlock all.
+  premium?: true
   path?: Path
   // Drawn over the ball, for trails that ski behind it rather than lie under it.
   front?: Path
   // One spark per this many px skied, so the effect is as dense at a crawl as at full speed.
   every?: number
-  spawn?: (x: number, y: number, env: TrailEnv) => SparkBody
+  spawn?: (x: number, y: number, env: TrailEnv) => SparkBody | SparkBody[]
+  // Extra motion on top of the spark's own velocity, run once a frame.
+  step?: (spark: Spark, dt: number) => void
   draw?: (ctx: CanvasRenderingContext2D, spark: Spark, x: number, y: number, age: number, env: TrailEnv) => void
 }
 
-const TAU = Math.PI * 2
 const MAX_SPARKS = 160
 // A full spectrum every 400 px, so the visible tail holds most of it without banding.
 export const RAINBOW_HUE_PER_PX = 0.9
-
-const between = (low: number, high: number): number => low + Math.random() * (high - low)
-
-const pick = (colours: readonly string[]): string =>
-  colours[Math.floor(Math.random() * colours.length)] ?? '#ffffff'
-
-const hash = (a: number, b = 0): number => {
-  const s = Math.sin(a * 127.1 + b * 311.7) * 43_758.545_3
-  return s - Math.floor(s)
-}
-
-const rgba = (hex: string, alpha: number): string => {
-  const value = Number.parseInt(hex.slice(1), 16)
-  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`
-}
-
-const spark = (x: number, y: number, over: Partial<SparkBody>): SparkBody => {
-  const life = over.life ?? 1
-  return { x, y, vx: 0, vy: 0, size: 3, rot: 0, vr: 0, colour: '#ffffff', ...over, life, max: life }
-}
 
 // The sparks the first trails shipped with: a little scatter, drifting mostly upward.
 const drift = (x: number, y: number, colour: string, size: number, life: number, speed: number): SparkBody =>
   spark(x + between(-3, 3), y, { colour, size, life, vx: between(-speed, speed), vy: between(-speed, speed * 0.4) })
 
-const line = (ctx: CanvasRenderingContext2D, points: readonly TrailPoint[], colour: string, width: number): void => {
-  if (points.length < 2) return
-  ctx.strokeStyle = colour
-  ctx.lineWidth = width
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  ctx.beginPath()
-  points.forEach((point, i) => (i === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y)))
-  ctx.stroke()
-}
-
-// Each segment is stroked on its own, so the colour or weight can change along the track.
-const each = (
-  ctx: CanvasRenderingContext2D,
-  points: readonly TrailPoint[],
-  style: (from: TrailPoint, u: number) => [string, number],
-): void => {
-  ctx.lineCap = 'round'
-  for (let i = 1; i < points.length; i += 1) {
-    const from = points[i - 1]
-    const to = points[i]
-    if (!from || !to) continue
-    const [colour, width] = style(from, i / (points.length - 1))
-    ctx.strokeStyle = colour
-    ctx.lineWidth = width
-    ctx.beginPath()
-    ctx.moveTo(from.x, from.y)
-    ctx.lineTo(to.x, to.y)
-    ctx.stroke()
-  }
-}
-
-// Points every `step` px of the run, pinned to the snow rather than to the ball.
-const resample = (points: readonly TrailPoint[], step: number): TrailPoint[] => {
-  const first = points[0]
-  const last = points[points.length - 1]
-  if (!first || !last) return []
-  const out: TrailPoint[] = [first]
-  for (let i = 1; i < points.length; i += 1) {
-    const a = points[i - 1]
-    const b = points[i]
-    if (!a || !b || b.d <= a.d) continue
-    for (let k = Math.ceil(a.d / step); k * step < b.d; k += 1) {
-      const u = (k * step - a.d) / (b.d - a.d)
-      out.push({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, d: k * step })
-    }
-  }
-  if (last !== first) out.push(last)
-  return out
-}
-
-// Where the run was `back` px before the head, and which way it was heading there.
-const behind = (points: readonly TrailPoint[], back: number): { x: number; y: number; ang: number } | null => {
-  const head = points[points.length - 1]
-  if (!head) return null
-  const target = head.d - back
-  for (let i = points.length - 1; i > 0; i -= 1) {
-    const a = points[i - 1]
-    const b = points[i]
-    if (!a || !b) continue
-    if (a.d <= target && target <= b.d) {
-      const u = (target - a.d) / Math.max(0.001, b.d - a.d)
-      return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, ang: Math.atan2(b.y - a.y, b.x - a.x) }
-    }
-  }
-  return null
-}
-
-const groove: Path = (ctx, points, { r, theme }) => line(ctx, points, theme.trail, r * 1.05)
-
 const plain =
   (colour: string): Path =>
   (ctx, points, { r }) =>
     line(ctx, points, colour, r * 1.05)
-
-const fourPoint = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number): void => {
-  ctx.beginPath()
-  ctx.moveTo(x, y - s)
-  ctx.quadraticCurveTo(x, y, x + s, y)
-  ctx.quadraticCurveTo(x, y, x, y + s)
-  ctx.quadraticCurveTo(x, y, x - s, y)
-  ctx.quadraticCurveTo(x, y, x, y - s)
-  ctx.fill()
-}
 
 const fivePoint = (ctx: CanvasRenderingContext2D, x: number, y: number, outer: number, rotation: number): void => {
   ctx.beginPath()
@@ -201,19 +141,10 @@ const heart = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number): 
   ctx.fill()
 }
 
-const dot = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, colour: string): void => {
-  ctx.fillStyle = colour
-  ctx.beginPath()
-  ctx.arc(x, y, radius, 0, TAU)
-  ctx.fill()
-}
-
 const SPARKLE = ['#60a5fa', '#f59e0b', '#a78bfa', '#34d399']
 const EMBER = ['#f97316', '#f59e0b', '#ef4444', '#fbbf24']
 const HEART = ['#f472b6', '#fb7185', '#ec4899']
 const CONFETTI = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899']
-
-const fadeIn = (age: number): number => Math.min(1, age * 2)
 
 const drawDuckling = (ctx: CanvasRenderingContext2D, x: number, y: number, ang: number, s: number): void => {
   ctx.fillStyle = 'rgba(92, 122, 162, 0.18)'
@@ -229,6 +160,7 @@ const drawDuckling = (ctx: CanvasRenderingContext2D, x: number, y: number, ang: 
 }
 
 const SNAKE_LENGTH = 170
+const TRAIN_COLOURS = ['#dc2626', '#2563eb', '#16a34a', '#eab308']
 
 export const TRAILS: readonly Trail[] = [
   { id: 'classic', name: 'Classic', path: groove },
@@ -410,7 +342,122 @@ export const TRAILS: readonly Trail[] = [
       ctx.stroke()
     },
   },
+  { id: 'iceblue', name: 'Ice blue', path: plain('#bfdbfe') },
+  { id: 'shadow', name: 'Shadow', path: plain('rgba(11,43,94,0.14)') },
+  {
+    id: 'deeppowder',
+    name: 'Deep powder',
+    path: (ctx, points, { r }) => {
+      line(ctx, points, '#eef4fc', r * 2.6)
+      line(ctx, points, '#dbe7f6', r * 1.1)
+    },
+  },
+  {
+    id: 'skitracks',
+    name: 'Ski tracks',
+    path: (ctx, points, { r }) => {
+      for (const by of [-0.55, 0.55]) line(ctx, offsetLine(points, 3, () => by * r), 'rgba(11,43,94,0.13)', r * 0.34)
+    },
+  },
+  {
+    id: 'snowboard',
+    name: 'Snowboard',
+    path: (ctx, points, { r, theme }) => {
+      line(ctx, points, theme.trail, r * 1.9)
+      for (const by of [-0.95, 0.95]) line(ctx, offsetLine(points, 3, () => by * r), '#cfdef1', 1.3)
+    },
+  },
+  {
+    id: 'dotted',
+    name: 'Dotted',
+    // The dash starts where the oldest point was laid, so the dots hold still on the snow.
+    path: (ctx, points, { r, tint }) => {
+      ctx.setLineDash([0.1, r * 1.7])
+      ctx.lineDashOffset = points[0]?.d ?? 0
+      line(ctx, points, tint, r * 0.6)
+    },
+  },
+  racingStripes,
+  tieDyeBand,
+  {
+    id: 'laser',
+    name: 'Laser',
+    path: (ctx, points, { r }) => {
+      line(ctx, points, 'rgba(239,68,68,0.22)', r * 1.5)
+      line(ctx, points, '#ef4444', r * 0.45)
+      line(ctx, points, '#ffffff', r * 0.15)
+    },
+  },
+  {
+    id: 'lightcycle',
+    name: 'Light cycle',
+    path: (ctx, points, { r }) => {
+      line(ctx, points, 'rgba(34,211,238,0.22)', r * 1.8)
+      line(ctx, points, '#22d3ee', r * 0.6)
+      line(ctx, points, '#ecfeff', r * 0.18)
+    },
+  },
+  {
+    id: 'speedlines',
+    name: 'Speed lines',
+    front: (ctx, points, { r, ang }) => {
+      const head = points[points.length - 1]
+      if (!head) return
+      ctx.strokeStyle = 'rgba(11,43,94,0.35)'
+      ctx.lineWidth = 1.4
+      for (let k = 0; k < 6; k += 1) {
+        const across = between(-r * 2.6, r * 2.6)
+        const back = between(r * 1.6, r * 5)
+        const length = between(r * 1.5, r * 4)
+        const sx = head.x - Math.cos(ang) * back - Math.sin(ang) * across
+        const sy = head.y - Math.sin(ang) * back + Math.cos(ang) * across
+        ctx.beginPath()
+        ctx.moveTo(sx, sy)
+        ctx.lineTo(sx - Math.cos(ang) * length, sy - Math.sin(ang) * length)
+        ctx.stroke()
+      }
+    },
+  },
+  skate,
+  sparkler,
+  comboHeat,
+  nearMissSparks,
+  penguins,
+  bees,
+  ants,
+  {
+    id: 'train',
+    name: 'Train',
+    front: (ctx, points, { r }) => {
+      for (let k = 1; k <= TRAIN_COLOURS.length; k += 1) {
+        const spot = behind(points, k * r * 3)
+        if (!spot) continue
+        ctx.save()
+        ctx.translate(spot.x, spot.y)
+        ctx.rotate(spot.ang)
+        ctx.fillStyle = TRAIN_COLOURS[k - 1] ?? '#dc2626'
+        ctx.beginPath()
+        ctx.roundRect(-r * 1.2, -r * 0.8, r * 2.4, r * 1.6, r * 0.3)
+        ctx.fill()
+        ctx.fillStyle = '#e0f2fe'
+        ctx.fillRect(-r * 0.8, -r * 0.45, r * 0.6, r * 0.9)
+        ctx.fillRect(r * 0.2, -r * 0.45, r * 0.6, r * 0.9)
+        ctx.restore()
+      }
+    },
+  },
+  kite,
+  phoenixTrail,
+  rocketExhaust,
+  dragon,
+  rainbowRoad,
+  galaxy,
+  goldRush,
+  neonTube,
+  fairyDust,
 ]
+
+export const isPremiumTrail = (id: TrailId): boolean => trailOf(id)?.premium === true
 
 const trailOf = (id: TrailId): Trail | undefined => TRAILS.find((entry) => entry.id === id)
 
@@ -468,7 +515,8 @@ export const emitTrailFx = (fx: TrailFx, id: TrailId, x: number, y: number, trav
   fx.carry += travelled
   while (fx.carry >= trail.every) {
     fx.carry -= trail.every
-    if (fx.sparks.length < MAX_SPARKS) fx.sparks.push({ ...trail.spawn(x, y, env), trail: id })
+    const made = trail.spawn(x, y, env)
+    for (const body of Array.isArray(made) ? made : [made]) if (fx.sparks.length < MAX_SPARKS) fx.sparks.push({ ...body, trail: id })
   }
 }
 
@@ -484,6 +532,7 @@ export const stepTrailFx = (fx: TrailFx, dt: number): void => {
     item.x += item.vx * dt
     item.y += item.vy * dt
     item.rot += item.vr * dt
+    trailOf(item.trail)?.step?.(item, dt)
   }
 }
 

@@ -29,6 +29,7 @@ export const award = (state: GameState, points: number, x: number, y: number): v
 
 export const nearMiss = (state: GameState, x: number, y: number): void => {
   state.combo += 1
+  state.nearMissAt = state.elapsed
   award(state, comboPoints(state.combo), x, y)
   state.cues.push('nearMiss')
 }

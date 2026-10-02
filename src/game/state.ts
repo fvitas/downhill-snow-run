@@ -111,6 +111,8 @@ export type GameState = {
   bestReach: number
   // A chain of near misses, only broken by a crash.
   combo: number
+  // When the last near miss landed, in elapsed seconds, so looks can flinch at it.
+  nearMissAt: number
   // The impact hold, in seconds, and the crash shake as a 0–1 strength. Both count down to zero.
   freeze: number
   shake: number
@@ -202,6 +204,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     newBest: false,
     bestReach: 0,
     combo: 0,
+    nearMissAt: Number.NEGATIVE_INFINITY,
     freeze: 0,
     shake: 0,
     helmet: false,
@@ -268,6 +271,7 @@ export const resetRun = (state: GameState): void => {
   state.distanceScore = 0
   state.newBest = false
   state.combo = 0
+  state.nearMissAt = Number.NEGATIVE_INFINITY
   state.freeze = 0
   state.shake = 0
   state.helmet = false

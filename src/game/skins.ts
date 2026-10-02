@@ -1,3 +1,7 @@
+import { babyDragon, bear, bee, bunny, axolotl, cow, dino, duckling, fox, giraffe, hamster, hedgehog, hippo, husky, koala, ladybug, mouse, otter, owl, penguin, pig, polarBear, reindeer, seal, shark, sheep, snowLeopard, tiger, unicorn, walrus, whale, wolf, yeti, zebra } from './balls/animals.ts'
+import { ghost, jackOLantern, ninja, robot, santa, scaredy } from './balls/characters.ts'
+import { circle, disc, gloss, hash, inside, local, polygon, rim, TAU } from './balls/kit.ts'
+import { avocado, beachBall, button, cocoa, comet, crackedIce, cupcake, eightBall, giftBox, glacier, golf, goldCoin, hypno, kiwi, opal, paintedEgg, pinecone, pokerChip, ruby, shuttlecock, snowGlobe, stainedGlass, strawberry, supernova } from './balls/objects.ts'
 import type { Theme } from './themes.ts'
 
 export type SkinId =
@@ -32,102 +36,116 @@ export type SkinId =
   | 'googly'
   | 'hazard'
   | 'compass'
+  | 'mint'
+  | 'coral'
+  | 'sky'
+  | 'teal'
+  | 'lavender'
+  | 'forest'
+  | 'sand'
+  | 'navy'
+  | 'bowling'
+  | 'smiley'
+  | 'cool'
+  | 'orange'
+  | 'eyeball'
+  | 'fireball'
+  | 'chameleon'
+  | 'eight'
+  | 'snowglobe'
+  | 'hotcocoa'
+  | 'pinecone'
+  | 'crackedice'
+  | 'glacier'
+  | 'comet'
+  | 'giftbox'
+  | 'paintedegg'
+  | 'kiwi'
+  | 'strawberry'
+  | 'cupcake'
+  | 'avocado'
+  | 'golf'
+  | 'beachball'
+  | 'pokerchip'
+  | 'stainedglass'
+  | 'goldcoin'
+  | 'ruby'
+  | 'opal'
+  | 'button'
+  | 'shuttlecock'
+  | 'robot'
+  | 'ninja'
+  | 'santa'
+  | 'ghost'
+  | 'scaredy'
+  | 'pumpkin'
+  | 'yeti'
+  | 'ladybug'
+  | 'bee'
+  | 'owl'
+  | 'pig'
+  | 'hedgehog'
+  | 'tiger'
+  | 'cow'
+  | 'koala'
+  | 'penguin'
+  | 'polarbear'
+  | 'reindeer'
+  | 'seal'
+  | 'bunny'
+  | 'mouse'
+  | 'sheep'
+  | 'axolotl'
+  | 'walrus'
+  | 'husky'
+  | 'hamster'
+  | 'duckling'
+  | 'whale'
+  | 'unicorn'
+  | 'shark'
+  | 'fox'
+  | 'wolf'
+  | 'bear'
+  | 'giraffe'
+  | 'zebra'
+  | 'hippo'
+  | 'otter'
+  | 'hypno'
+  | 'supernova'
+  | 'babydragon'
+  | 'snowleopard'
+  | 'dino'
 
 export type BallSpin = 'off' | 'roll' | 'turns'
 
 // spin turns the patterned balls; heading is sideways travel, -1 (left) to 1 (right); t is seconds.
-export type BallEnv = { theme: Theme; spin: number; heading: number; t: number }
+// heat climbs 0–1 with the near-miss combo; fright pulses 0–1 just after a near miss.
+export type BallEnv = { theme: Theme; spin: number; heading: number; t: number; heat: number; fright: number }
 
-type Paint = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, env: BallEnv) => void
+export type Paint = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, env: BallEnv) => void
 
-// A tint of null follows the world's own ball colour.
-type Skin = { id: SkinId; name: string; tint: string | null; paint: Paint }
+// A tint of null follows the world's own ball colour. Premium looks only come with Unlock all.
+type Skin = { id: SkinId; name: string; tint: string | null; paint: Paint; premium?: true }
 
-const TAU = Math.PI * 2
 // Half a true roll: at full speed a real roll turns so fast it strobes.
 const SPIN_PER_RADIUS = 0.5
 
-export const stillBall = (theme: Theme): BallEnv => ({ theme, spin: 0, heading: 0, t: 0 })
+const HEAT_COMBO = 10
+const FRIGHT_SECONDS = 0.9
+
+export const stillBall = (theme: Theme): BallEnv => ({ theme, spin: 0, heading: 0, t: 0, heat: 0, fright: 0 })
+
+export const heatOf = (combo: number): number => Math.min(1, combo / HEAT_COMBO)
+
+export const frightOf = (since: number): number => (since >= 0 && since < FRIGHT_SECONDS ? Math.sin((since / FRIGHT_SECONDS) * Math.PI) : 0)
+
+// The Locker has no run, so it fakes one: the combo climbs over 8 s and a near miss lands every 4 s.
+export const previewSignals = (t: number): Pick<BallEnv, 'heat' | 'fright'> => ({ heat: (t % 8) / 8, fright: frightOf(t % 4) })
 
 export const spinStep = (mode: BallSpin, travelled: number, r: number, direction: number): number => {
   if (mode === 'off') return 0
   const turn = (travelled / r) * SPIN_PER_RADIUS
   return mode === 'turns' ? turn * Math.sign(direction || 1) : turn
-}
-
-const circle = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void => {
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, TAU)
-}
-
-const disc = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, colour: string): void => {
-  ctx.fillStyle = colour
-  circle(ctx, x, y, r)
-  ctx.fill()
-}
-
-// The game's ball is 7 px with a 2 px rim; previews draw bigger and keep the same proportion.
-const rim = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, colour: string, k = 0.28): void => {
-  ctx.strokeStyle = colour
-  ctx.lineWidth = Math.max(1, r * k)
-  circle(ctx, x, y, r)
-  ctx.stroke()
-}
-
-// Draws about the ball's centre, turned by spin.
-const local = (
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  spin: number,
-  draw: (ctx: CanvasRenderingContext2D) => void,
-): void => {
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.rotate(spin)
-  draw(ctx)
-  ctx.restore()
-}
-
-// The same, clipped to the ball, for patterns that run off its edge.
-const inside = (
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  spin: number,
-  draw: (ctx: CanvasRenderingContext2D) => void,
-): void => {
-  ctx.save()
-  circle(ctx, x, y, r)
-  ctx.clip()
-  local(ctx, x, y, spin, draw)
-  ctx.restore()
-}
-
-const gloss = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number): void => {
-  const shine = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, 0, x - r * 0.35, y - r * 0.4, r * 0.95)
-  shine.addColorStop(0, `rgba(255,255,255,${alpha})`)
-  shine.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = shine
-  circle(ctx, x, y, r)
-  ctx.fill()
-}
-
-// A fixed scatter, so sprinkles and mirror tiles keep their places frame to frame.
-const hash = (a: number, b = 0): number => {
-  const s = Math.sin(a * 127.1 + b * 311.7) * 43_758.545_3
-  return s - Math.floor(s)
-}
-
-const polygon = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, sides: number, rotation: number): void => {
-  ctx.beginPath()
-  for (let i = 0; i < sides; i += 1) {
-    const a = rotation + (i / sides) * TAU
-    if (i === 0) ctx.moveTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius)
-    else ctx.lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius)
-  }
-  ctx.closePath()
 }
 
 const solid =
@@ -531,6 +549,133 @@ const paintCompass: Paint = (ctx, x, y, r, { heading, t }) => {
   })
 }
 
+const paintBowling: Paint = (ctx, x, y, r, { spin }) => {
+  const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r)
+  g.addColorStop(0, '#6d28d9')
+  g.addColorStop(1, '#1e1b4b')
+  ctx.fillStyle = g
+  circle(ctx, x, y, r)
+  ctx.fill()
+  inside(ctx, x, y, r, spin, (ctx) => {
+    ctx.fillStyle = '#0b0a1f'
+    for (const [hx, hy] of [
+      [-0.12, -0.45],
+      [0.22, -0.4],
+      [0.04, -0.1],
+    ] as const) {
+      circle(ctx, hx * r, hy * r, r * 0.13)
+      ctx.fill()
+    }
+  })
+  gloss(ctx, x, y, r, 0.35)
+  rim(ctx, x, y, r, '#0b0a1f', 0.14)
+}
+
+const paintSmiley: Paint = (ctx, x, y, r) => {
+  disc(ctx, x, y, r, '#facc15')
+  ctx.fillStyle = '#422006'
+  ctx.beginPath()
+  ctx.ellipse(x - r * 0.33, y - r * 0.2, r * 0.11, r * 0.18, 0, 0, TAU)
+  ctx.ellipse(x + r * 0.33, y - r * 0.2, r * 0.11, r * 0.18, 0, 0, TAU)
+  ctx.fill()
+  ctx.strokeStyle = '#422006'
+  ctx.lineWidth = Math.max(0.8, r * 0.1)
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  ctx.arc(x, y + r * 0.02, r * 0.5, 0.2 * Math.PI, 0.8 * Math.PI)
+  ctx.stroke()
+  rim(ctx, x, y, r, '#ca8a04', 0.16)
+}
+
+const paintCool: Paint = (ctx, x, y, r) => {
+  disc(ctx, x, y, r, '#facc15')
+  ctx.fillStyle = '#111827'
+  ctx.beginPath()
+  ctx.roundRect(x - r * 0.78, y - r * 0.32, r * 0.7, r * 0.42, r * 0.16)
+  ctx.roundRect(x + r * 0.08, y - r * 0.32, r * 0.7, r * 0.42, r * 0.16)
+  ctx.fill()
+  ctx.fillRect(x - r * 0.2, y - r * 0.28, r * 0.4, r * 0.1)
+  ctx.strokeStyle = '#422006'
+  ctx.lineWidth = Math.max(0.8, r * 0.09)
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  ctx.arc(x + r * 0.1, y + r * 0.2, r * 0.3, 0.15 * Math.PI, 0.7 * Math.PI)
+  ctx.stroke()
+  rim(ctx, x, y, r, '#ca8a04', 0.16)
+}
+
+const paintOrange: Paint = (ctx, x, y, r, { spin }) => {
+  disc(ctx, x, y, r, '#f97316')
+  disc(ctx, x, y, r * 0.84, '#fff7ed')
+  local(ctx, x, y, spin, (ctx) => {
+    ctx.fillStyle = '#fb923c'
+    const step = TAU / 8
+    for (let i = 0; i < 8; i += 1) {
+      ctx.beginPath()
+      ctx.moveTo(Math.cos(i * step + step / 2) * r * 0.08, Math.sin(i * step + step / 2) * r * 0.08)
+      ctx.arc(0, 0, r * 0.74, i * step + 0.08, (i + 1) * step - 0.08)
+      ctx.closePath()
+      ctx.fill()
+    }
+  })
+  rim(ctx, x, y, r, '#c2410c', 0.14)
+}
+
+const paintEyeball: Paint = (ctx, x, y, r, { t, heading }) => {
+  disc(ctx, x, y, r, '#ffffff')
+  inside(ctx, x, y, r, 0, (ctx) => {
+    ctx.strokeStyle = 'rgba(220,38,38,0.5)'
+    ctx.lineWidth = Math.max(0.4, r * 0.03)
+    for (let i = 0; i < 6; i += 1) {
+      const a = (i / 6) * TAU + 0.3
+      ctx.beginPath()
+      ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r)
+      ctx.quadraticCurveTo(Math.cos(a + 0.3) * r * 0.75, Math.sin(a + 0.3) * r * 0.75, Math.cos(a) * r * 0.55, Math.sin(a) * r * 0.55)
+      ctx.stroke()
+    }
+    // Looks downhill and toward the turn.
+    const ix = heading * r * 0.35
+    const iy = r * 0.28
+    disc(ctx, ix, iy, r * 0.42, '#2563eb')
+    disc(ctx, ix, iy, r * 0.2, '#0b1020')
+    disc(ctx, ix - r * 0.1, iy - r * 0.12, r * 0.08, '#ffffff')
+    const blink = t % 3.2
+    if (blink < 0.14) {
+      const shut = 1 - Math.abs(blink / 0.07 - 1)
+      ctx.fillStyle = '#f5c7a0'
+      ctx.fillRect(-r, -r, r * 2, r * 2 * shut)
+    }
+  })
+  rim(ctx, x, y, r, '#e5e7eb', 0.12)
+}
+
+// Flames trail up the screen, the way the ball has come.
+const paintFireball: Paint = (ctx, x, y, r, { t }) => {
+  for (let k = 0; k < 7; k += 1) {
+    const off = (k - 3) * r * 0.26
+    const h = r * (1.1 + 0.45 * Math.sin(t * 14 + k * 1.9)) * (1 - Math.abs(k - 3) * 0.16)
+    ctx.fillStyle = k % 2 === 0 ? '#f97316' : '#fbbf24'
+    ctx.beginPath()
+    ctx.moveTo(x + off - r * 0.3, y)
+    ctx.quadraticCurveTo(x + off - r * 0.1, y - h * 0.8, x + off, y - r * 0.5 - h)
+    ctx.quadraticCurveTo(x + off + r * 0.1, y - h * 0.8, x + off + r * 0.3, y)
+    ctx.fill()
+  }
+  const g = ctx.createRadialGradient(x, y + r * 0.1, 0, x, y, r)
+  g.addColorStop(0, '#fef3c7')
+  g.addColorStop(0.6, '#fbbf24')
+  g.addColorStop(1, '#ea580c')
+  ctx.fillStyle = g
+  circle(ctx, x, y, r)
+  ctx.fill()
+}
+
+const paintChameleon: Paint = (ctx, x, y, r, { t }) => {
+  const hue = (t * 50) % 360
+  disc(ctx, x, y, r, `hsl(${hue} 80% 58%)`)
+  rim(ctx, x, y, r, `hsl(${hue} 80% 38%)`)
+}
+
 export const SKINS: readonly Skin[] = [
   { id: 'classic', name: 'Classic', tint: null, paint: paintClassic },
   { id: 'snowball', name: 'Snowball', tint: '#94a3b8', paint: solid('#ffffff', '#94a3b8') },
@@ -568,9 +713,90 @@ export const SKINS: readonly Skin[] = [
   { id: 'googly', name: 'Googly', tint: null, paint: paintGoogly },
   { id: 'hazard', name: 'Hazard', tint: '#facc15', paint: paintHazard },
   { id: 'compass', name: 'Compass', tint: '#0b2b5e', paint: paintCompass },
+  { id: 'mint', name: 'Mint', tint: '#34d399', paint: solid('#34d399', '#059669') },
+  { id: 'coral', name: 'Coral', tint: '#fb7185', paint: solid('#fb7185', '#e11d48') },
+  { id: 'sky', name: 'Sky', tint: '#7dd3fc', paint: solid('#7dd3fc', '#0284c7') },
+  { id: 'teal', name: 'Teal', tint: '#14b8a6', paint: solid('#14b8a6', '#0f766e') },
+  { id: 'lavender', name: 'Lavender', tint: '#c4b5fd', paint: solid('#c4b5fd', '#7c3aed') },
+  { id: 'forest', name: 'Forest', tint: '#16a34a', paint: solid('#16a34a', '#14532d') },
+  { id: 'sand', name: 'Sand', tint: '#d6b48a', paint: solid('#e7c9a0', '#b08250') },
+  { id: 'navy', name: 'Navy', tint: '#0b2b5e', paint: solid('#1e40af', '#0b2b5e') },
+  { id: 'chameleon', name: 'Chameleon', tint: '#22c55e', paint: paintChameleon },
+  { id: 'eight', name: '8-ball', tint: '#111827', paint: eightBall },
+  { id: 'bowling', name: 'Bowling', tint: '#6d28d9', paint: paintBowling },
+  { id: 'golf', name: 'Golf', tint: '#94a3b8', paint: golf },
+  { id: 'beachball', name: 'Beach ball', tint: '#ef4444', paint: beachBall },
+  { id: 'shuttlecock', name: 'Shuttlecock', tint: '#ef4444', paint: shuttlecock },
+  { id: 'pokerchip', name: 'Poker chip', tint: '#dc2626', paint: pokerChip },
+  { id: 'goldcoin', name: 'Gold coin', tint: '#ca8a04', paint: goldCoin },
+  { id: 'button', name: 'Button', tint: '#14b8a6', paint: button },
+  { id: 'ruby', name: 'Ruby', tint: '#e11d48', paint: ruby },
+  { id: 'opal', name: 'Opal', tint: '#7dd3fc', paint: opal },
+  { id: 'stainedglass', name: 'Stained glass', tint: '#2563eb', paint: stainedGlass },
+  { id: 'orange', name: 'Orange slice', tint: '#f97316', paint: paintOrange },
+  { id: 'kiwi', name: 'Kiwi', tint: '#65a30d', paint: kiwi },
+  { id: 'strawberry', name: 'Strawberry', tint: '#e11d48', paint: strawberry },
+  { id: 'cupcake', name: 'Cupcake', tint: '#f9a8d4', paint: cupcake },
+  { id: 'avocado', name: 'Avocado', tint: '#84cc16', paint: avocado },
+  { id: 'smiley', name: 'Smiley', tint: '#facc15', paint: paintSmiley },
+  { id: 'cool', name: 'Cool', tint: '#facc15', paint: paintCool },
+  { id: 'scaredy', name: 'Scaredy', tint: '#0891b2', paint: scaredy },
+  { id: 'eyeball', name: 'Eyeball', tint: '#2563eb', paint: paintEyeball },
+  { id: 'fireball', name: 'Fireball', tint: '#f97316', paint: paintFireball },
+  { id: 'comet', name: 'Comet', tint: '#38bdf8', paint: comet },
+  { id: 'snowglobe', name: 'Snow globe', tint: '#7dd3fc', paint: snowGlobe },
+  { id: 'hotcocoa', name: 'Hot cocoa', tint: '#92400e', paint: cocoa },
+  { id: 'pinecone', name: 'Pinecone', tint: '#78350f', paint: pinecone },
+  { id: 'crackedice', name: 'Cracked ice', tint: '#93c5fd', paint: crackedIce },
+  { id: 'glacier', name: 'Glacier', tint: '#0284c7', paint: glacier },
+  { id: 'santa', name: 'Santa', tint: '#dc2626', paint: santa },
+  { id: 'giftbox', name: 'Gift box', tint: '#dc2626', paint: giftBox },
+  { id: 'pumpkin', name: "Jack-o'-lantern", tint: '#ea580c', paint: jackOLantern },
+  { id: 'ghost', name: 'Ghost', tint: '#94a3b8', paint: ghost },
+  { id: 'paintedegg', name: 'Painted egg', tint: '#a78bfa', paint: paintedEgg },
+  { id: 'robot', name: 'Robot', tint: '#64748b', paint: robot },
+  { id: 'ninja', name: 'Ninja', tint: '#dc2626', paint: ninja },
+  { id: 'yeti', name: 'Yeti', tint: '#7dd3fc', paint: yeti },
+  { id: 'penguin', name: 'Penguin', tint: '#0f172a', paint: penguin },
+  { id: 'polarbear', name: 'Polar bear', tint: '#cbd5e1', paint: polarBear },
+  { id: 'seal', name: 'Seal', tint: '#94a3b8', paint: seal },
+  { id: 'walrus', name: 'Walrus', tint: '#8b6a4a', paint: walrus },
+  { id: 'husky', name: 'Husky', tint: '#475569', paint: husky },
+  { id: 'reindeer', name: 'Reindeer', tint: '#78350f', paint: reindeer },
+  { id: 'fox', name: 'Fox', tint: '#ea580c', paint: fox },
+  { id: 'wolf', name: 'Wolf', tint: '#374151', paint: wolf },
+  { id: 'bear', name: 'Bear', tint: '#78350f', paint: bear },
+  { id: 'owl', name: 'Owl', tint: '#92400e', paint: owl },
+  { id: 'hedgehog', name: 'Hedgehog', tint: '#57534e', paint: hedgehog },
+  { id: 'bunny', name: 'Bunny', tint: '#f9a8d4', paint: bunny },
+  { id: 'mouse', name: 'Mouse', tint: '#9ca3af', paint: mouse },
+  { id: 'hamster', name: 'Hamster', tint: '#ea8a2a', paint: hamster },
+  { id: 'otter', name: 'Otter', tint: '#92400e', paint: otter },
+  { id: 'dino', name: 'Dino', tint: '#16a34a', paint: dino },
+  { id: 'pig', name: 'Pig', tint: '#f472b6', paint: pig },
+  { id: 'cow', name: 'Cow', tint: '#1f2937', paint: cow },
+  { id: 'sheep', name: 'Sheep', tint: '#334155', paint: sheep },
+  { id: 'duckling', name: 'Duckling', tint: '#facc15', paint: duckling },
+  { id: 'ladybug', name: 'Ladybug', tint: '#dc2626', paint: ladybug },
+  { id: 'bee', name: 'Bee', tint: '#eab308', paint: bee },
+  { id: 'koala', name: 'Koala', tint: '#9ca3af', paint: koala },
+  { id: 'tiger', name: 'Tiger', tint: '#ea580c', paint: tiger },
+  { id: 'zebra', name: 'Zebra', tint: '#111827', paint: zebra },
+  { id: 'giraffe', name: 'Giraffe', tint: '#f59e0b', paint: giraffe },
+  { id: 'hippo', name: 'Hippo', tint: '#6d6491', paint: hippo },
+  { id: 'axolotl', name: 'Axolotl', tint: '#fb7185', paint: axolotl },
+  { id: 'whale', name: 'Whale', tint: '#1d4ed8', paint: whale },
+  { id: 'shark', name: 'Shark', tint: '#475569', paint: shark },
+  { id: 'unicorn', name: 'Unicorn', tint: '#c4b5fd', paint: unicorn },
+  { id: 'hypno', name: 'Hypno', tint: '#7c3aed', paint: hypno, premium: true },
+  { id: 'babydragon', name: 'Baby dragon', tint: '#7c3aed', paint: babyDragon, premium: true },
+  { id: 'snowleopard', name: 'Snow leopard', tint: '#94a3b8', paint: snowLeopard, premium: true },
+  { id: 'supernova', name: 'Supernova', tint: '#f59e0b', paint: supernova, premium: true },
 ]
 
 const skinOf = (id: SkinId): Skin | undefined => SKINS.find((entry) => entry.id === id) ?? SKINS[0]
+
+export const isPremiumSkin = (id: SkinId): boolean => skinOf(id)?.premium === true
 
 export const tintOf = (id: SkinId, theme: Theme): string => skinOf(id)?.tint ?? theme.ball
 

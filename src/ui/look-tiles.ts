@@ -38,6 +38,8 @@ export const trailEnvFor = (ball: SkinId, r: number, hueRate: number, ballEnv: B
   ang,
   heading: ballEnv.heading,
   hueRate,
+  heat: ballEnv.heat,
+  fright: ballEnv.fright,
   paintBall: (ctx, x, y, radius) => paintBall(ctx, ball, x, y, radius, ballEnv),
 })
 
@@ -57,7 +59,8 @@ const drawTrailTile = (ctx: CanvasRenderingContext2D, id: TrailId, ball: SkinId,
   if (!head || !before) return
   const r = size * TRAIL_BALL_PER_PX
   const still = stillBall(UI_THEME)
-  const env = trailEnvFor(ball, r, TILE_HUE_PER_PX, still, Math.atan2(head.y - before.y, head.x - before.x))
+  // A tile is one still frame, so the trails that react to the run show them mid-combo, just after a near miss.
+  const env = { ...trailEnvFor(ball, r, TILE_HUE_PER_PX, still, Math.atan2(head.y - before.y, head.x - before.x)), heat: 0.7, fright: 1 }
   drawTrailPath(ctx, id, points, head, 0, env)
   const fx = createTrailFx()
   let previous = points[0]

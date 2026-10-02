@@ -1,7 +1,7 @@
 import confetti from 'canvas-confetti'
 import { looks, setLook } from '../game/looks.ts'
 import { UI_THEME } from '../game/themes.ts'
-import { ALL_LOOKS, isSpinLevel, lookName, spinTaken, takeSpin, winLook, type Look } from '../game/unlocks.ts'
+import { ALL_LOOKS, isPremiumLook, isSpinLevel, lookName, spinTaken, takeSpin, winLook, type Look } from '../game/unlocks.ts'
 import { applySolid, PRESS, withAlpha } from './glass.ts'
 import { playHaptics } from './haptics.ts'
 import { drawLookTile, sizedCanvas } from './look-tiles.ts'
@@ -34,7 +34,7 @@ const shuffled = <T>(items: readonly T[]): T[] => {
 // Fast off the mark, then a long coast into the pointer.
 const easeOut = (t: number): number => 1 - (1 - t) ** 4
 
-const lockedLooks = (): Look[] => ALL_LOOKS.filter((look) => !ownsLook(look))
+const lockedLooks = (): Look[] => ALL_LOOKS.filter((look) => !isPremiumLook(look) && !ownsLook(look))
 
 // The one spin a finish card holds: leaving the card without spinning throws it away.
 let waiting: number | null = null
