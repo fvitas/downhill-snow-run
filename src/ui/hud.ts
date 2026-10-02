@@ -18,6 +18,7 @@ export type HudActions = {
   onMenu: () => void
   onNext: () => void
   onPause: () => void
+  onSecondChance: () => void
   onSettings: () => void
 }
 
@@ -241,6 +242,12 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   const buttons = document.createElement('div')
   buttons.className = 'mt-5 flex w-full flex-col items-stretch gap-2'
 
+  // Picks the run up where it ended, once per run, so it leads while it is still on offer.
+  const secondChance = button(
+    'Second chance',
+    `${PRESS} relative rounded-2xl border px-4 py-3.5 text-base font-bold`,
+    actions.onSecondChance,
+  )
   const primary = button(
     'Let’s go again',
     `${PRESS} relative rounded-2xl border px-4 py-3.5 text-base font-bold`,
@@ -261,7 +268,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
     `${PRESS} rounded-2xl px-4 py-2 text-sm font-semibold opacity-60`,
     actions.onMenu,
   )
-  buttons.append(primary, crashSite, menu)
+  buttons.append(secondChance, primary, crashSite, menu)
 
   sheet.append(title, verdict, finalScore, detail, buttons)
 
@@ -433,6 +440,9 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       finalScore.style.color = theme.ball
       finalScore.style.textShadow = `0 2px 10px ${withAlpha(theme.ball, 0.2)}`
       applySolid(primary, theme.ink, theme.snow)
+      const canRevive = state.dead && !state.secondChanceUsed
+      secondChance.style.display = canRevive ? 'block' : 'none'
+      if (canRevive) applySolid(secondChance, theme.ball, '#ffffff')
       primary.textContent = state.finished ? 'Next level' : 'Let’s go again'
       crashSite.style.background = theme.snow
       crashSite.style.borderColor = 'transparent'

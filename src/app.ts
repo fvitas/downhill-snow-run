@@ -24,6 +24,7 @@ import {
   finishY,
   levelProgress,
   PIXELS_PER_METRE,
+  revive,
   runActive,
   runOver,
   scoreDistance,
@@ -136,6 +137,11 @@ export const createGame = (mount: GameMount): Game => {
     onMenu: clicked(openMap),
     onPause: clicked(pauseControl.pause),
     onSettings: clicked(settingsSheet.open),
+    onSecondChance: clicked(() => {
+      revive(state)
+      // The next crash is a new furthest point worth keeping.
+      reachSaved = false
+    }),
   })
 
   preloadSprites()

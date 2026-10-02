@@ -114,6 +114,8 @@ export type GameState = {
   // Power-ups: the helmet is a single save, ghost and ×2 are seconds left, and the shield is the
   // blink after a save when nothing can land.
   helmet: boolean
+  // One revive per run, from the crash card.
+  secondChanceUsed: boolean
   ghost: number
   double: number
   shield: number
@@ -198,6 +200,7 @@ export const createState = (tuning: TuningConfig, levelIndex: number): GameState
     freeze: 0,
     shake: 0,
     helmet: false,
+    secondChanceUsed: false,
     ghost: 0,
     double: 0,
     shield: 0,
@@ -261,6 +264,7 @@ export const resetRun = (state: GameState): void => {
   state.freeze = 0
   state.shake = 0
   state.helmet = false
+  state.secondChanceUsed = false
   state.ghost = 0
   state.double = 0
   state.shield = 0
@@ -284,6 +288,36 @@ export const resetRun = (state: GameState): void => {
   for (const rock of state.course.rocks) resetRock(rock)
   for (const hazard of state.course.hazards) resetHazard(hazard)
   for (const pickup of state.course.pickups) pickup.taken = false
+}
+
+// A wall crash comes back this far across the slope, with room to turn before the edge again.
+const REVIVE_WALL_INSET = 0.3
+// The blink after a revive: long enough to ski out of the trunk or animal that caused the crash.
+const REVIVE_GRACE_SECONDS = 1.2
+
+// Back on the slope where the run ended, counted in again, with the score and power-ups kept.
+export const revive = (state: GameState): void => {
+  if (!state.dead || state.secondChanceUsed) return
+  if (state.lastHit?.kind === 'wall') {
+    const left = state.x < LOGICAL_WIDTH / 2
+    state.x = LOGICAL_WIDTH * (left ? REVIVE_WALL_INSET : 1 - REVIVE_WALL_INSET)
+    state.direction = left ? 1 : -1
+    // Otherwise the track would draw a straight line across the slope to the new spot.
+    state.trail.length = 0
+  }
+  state.prevX = state.x
+  state.prevY = state.y
+  state.angle = 0
+  state.dead = false
+  state.secondChanceUsed = true
+  state.freeze = 0
+  state.shake = 0
+  state.shield = REVIVE_GRACE_SECONDS
+  state.lastHit = null
+  state.hitTree = null
+  state.inspect.on = false
+  state.started = false
+  state.countdown = COUNTDOWN_SECONDS
 }
 
 const INSPECT_EASE = 7
