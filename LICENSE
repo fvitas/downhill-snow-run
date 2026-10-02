@@ -1,0 +1,24 @@
+Copyright (c) 2026 Filip Vitas. All rights reserved.
+
+Downhill: Snow Run is source-available, not open source. The code is public so it can be read.
+It is not licensed for reuse.
+
+Without prior written permission from the copyright holder, you may not:
+
+- copy, modify, merge, translate or create derivative works from this software or any part of it;
+- publish, distribute, sublicense, sell or rent it, or any app, game or website built from it;
+- reuse its assets, including art, icons, sounds, level designs, store graphics and text;
+- use the name "Downhill: Snow Run", its icon or a confusingly similar name or look for another app.
+
+Viewing this repository and forking it on GitHub, as GitHub's Terms of Service allow for public
+repositories, is permitted. That grants no other rights to the code or assets.
+
+Third-party packages used by this project keep their own licenses.
+
+To ask for permission, email app.filip.vitas@gmail.com.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.

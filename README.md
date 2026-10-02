@@ -44,3 +44,7 @@ pnpm android    # open the Android project in Android Studio
 ```
 
 The release checklist and store listings are in [store/README.md](store/README.md).
+
+## License
+
+Copyright © 2026 Filip Vitas. All rights reserved. The source is public to read, not to reuse: see [LICENSE](LICENSE).
