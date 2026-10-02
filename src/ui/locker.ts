@@ -1,4 +1,4 @@
-import { createElement, Crown, LockKeyhole } from 'lucide'
+import { createElement, LockKeyhole } from 'lucide'
 import { purchaseNotice } from '../game/entitlements.ts'
 import { looks, setLook, SPINS, watchLooks, type Looks } from '../game/looks.ts'
 import { paintBall, previewSignals, SKINS, spinStep, type BallEnv, type BallSpin } from '../game/skins.ts'
@@ -15,7 +15,7 @@ import {
   trailHead,
   TRAILS,
 } from '../game/trails.ts'
-import { ALL_LOOKS, isPremiumLook, lookKey, lookName, watchUnlocks, type Look } from '../game/unlocks.ts'
+import { ALL_LOOKS, lookKey, lookName, watchUnlocks, type Look } from '../game/unlocks.ts'
 import type { TrailPoint } from '../game/world.ts'
 import { applySolid, PRESS, withAlpha } from './glass.ts'
 import { drawLookTile, sizedCanvas, trailEnvFor } from './look-tiles.ts'
@@ -30,7 +30,6 @@ const PREVIEW_SPEED = 170
 const POINT_SPACING = 6
 const BALL_TILE = 36
 const TRAIL_TILE = 44
-const PREMIUM_GOLD = '#ca8a04'
 
 const sectionTitle = (text: string): [HTMLDivElement, HTMLSpanElement] => {
   const row = document.createElement('div')
@@ -56,12 +55,6 @@ const tile = (look: Look, size: number, onPick: () => void): Tile => {
   const lock = createElement(LockKeyhole, { width: 11, height: 11, 'stroke-width': 2.75, 'aria-hidden': 'true' })
   lock.setAttribute('class', 'absolute right-1 top-1 opacity-60')
   button.append(canvas, lock)
-  if (isPremiumLook(look)) {
-    const crown = createElement(Crown, { width: 11, height: 11, 'stroke-width': 2.75, 'aria-hidden': 'true' })
-    crown.setAttribute('class', 'absolute left-1 top-1')
-    crown.style.color = PREMIUM_GOLD
-    button.append(crown)
-  }
   button.addEventListener('click', () => {
     playClick()
     onPick()
@@ -176,7 +169,7 @@ export const createLocker = (): Locker => {
     sync()
   }
 
-  const { root, sheet, open } = createModal('Locker', start, stop)
+  const { root, sheet, open } = createModal('Collection', start, stop)
 
   const wear = (look: Look): void => {
     trying = null

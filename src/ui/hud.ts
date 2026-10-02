@@ -1,4 +1,4 @@
-import { createElement, Settings } from 'lucide'
+import { createElement, Palette, Settings, type IconNode } from 'lucide'
 import { crashWorthReviving, rateRun } from '../game/levels.ts'
 import { setting, watchSettings } from '../game/settings.ts'
 import {
@@ -22,6 +22,7 @@ export type HudActions = {
   onPause: () => void
   // Resolves to a line to show under the button, or '' once the run is back on.
   onSecondChance: () => Promise<string>
+  onLocker: () => void
   onSettings: () => void
   onSpin: () => void
 }
@@ -286,21 +287,26 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
 
   sheet.append(title, verdict, finalScore, detail, buttons)
 
-  // Where the map keeps its gear, so Settings is in the same corner on both screens. A click, not
-  // the pointerdown the other buttons use: a click still to come would land on the sheet's backdrop
-  // and close it again.
-  const gear = document.createElement('button')
-  gear.type = 'button'
-  gear.ariaLabel = 'Settings'
-  gear.dataset.ui = ''
-  gear.className =
-    'absolute right-4 top-[calc(max(env(safe-area-inset-top),2.75rem)+0.95rem)] flex h-[35px] ' +
-    'w-[35px] items-center justify-center rounded-full bg-white/[0.16] text-white backdrop-blur-md ' +
-    'transition-transform duration-150 ease-out active:scale-[0.92]'
-  gear.append(createElement(Settings, { width: 19, height: 19, 'stroke-width': 2.5, 'aria-hidden': 'true' }))
-  gear.addEventListener('click', actions.onSettings)
+  // Where the map keeps its Collection and gear, so both sit in the same corner on every screen. A click,
+  // not the pointerdown the other buttons use: a click still to come would land on the sheet's
+  // backdrop and close it again.
+  const roundButton = (label: string, node: IconNode, onClick: () => void): HTMLButtonElement => {
+    const element = document.createElement('button')
+    element.type = 'button'
+    element.ariaLabel = label
+    element.dataset.ui = ''
+    element.className =
+      'flex h-[35px] w-[35px] items-center justify-center rounded-full bg-white/[0.16] backdrop-blur-md ' +
+      'transition-transform duration-150 ease-out active:scale-[0.92]'
+    element.append(createElement(node, { width: 19, height: 19, 'stroke-width': 2.5, 'aria-hidden': 'true' }))
+    element.addEventListener('click', onClick)
+    return element
+  }
+  const corner = document.createElement('div')
+  corner.className = 'absolute right-4 top-[calc(max(env(safe-area-inset-top),2.75rem)+0.95rem)] flex gap-2.5 text-white'
+  corner.append(roundButton('Collection', Palette, actions.onLocker), roundButton('Settings', Settings, actions.onSettings))
 
-  card.append(sheet, gear)
+  card.append(sheet, corner)
 
   const countdown = document.createElement('div')
   countdown.className = 'absolute inset-0 flex items-center justify-center'
@@ -483,7 +489,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
         secondary.style.boxShadow = `0 6px 16px ${withAlpha(theme.ink, 0.16)}`
       }
       crashSite.style.background = withAlpha(theme.ink, 0.07)
-      crashSite.style.boxShadow = `0 2px 6px ${withAlpha(theme.ink, 0.1)}`
+      crashSite.style.boxShadow = 'none'
       // A wall hit has nothing to look at: the edge is the whole screen's side.
       const inspectable = !state.finished && state.lastHit !== null && state.lastHit.kind !== 'wall'
       crashSite.style.display = inspectable ? 'block' : 'none'

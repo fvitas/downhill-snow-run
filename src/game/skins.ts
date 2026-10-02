@@ -139,7 +139,7 @@ export const heatOf = (combo: number): number => Math.min(1, combo / HEAT_COMBO)
 
 export const frightOf = (since: number): number => (since >= 0 && since < FRIGHT_SECONDS ? Math.sin((since / FRIGHT_SECONDS) * Math.PI) : 0)
 
-// The Locker has no run, so it fakes one: the combo climbs over 8 s and a near miss lands every 4 s.
+// The Collection has no run, so it fakes one: the combo climbs over 8 s and a near miss lands every 4 s.
 export const previewSignals = (t: number): Pick<BallEnv, 'heat' | 'fright'> => ({ heat: (t % 8) / 8, fright: frightOf(t % 4) })
 
 export const spinStep = (mode: BallSpin, travelled: number, r: number, direction: number): number => {
@@ -280,7 +280,7 @@ const paintNine: Paint = (ctx, x, y, r, { spin }) => {
     ctx.fillStyle = '#facc15'
     ctx.fillRect(-r, -r * 0.52, r * 2, r * 1.04)
     disc(ctx, 0, 0, r * 0.38, '#ffffff')
-    // Too small to read on the slope, so only the Locker's bigger ball carries the number.
+    // Too small to read on the slope, so only the Collection's bigger ball carries the number.
     if (r > 12) {
       ctx.fillStyle = '#111827'
       ctx.font = `bold ${r * 0.48}px system-ui`

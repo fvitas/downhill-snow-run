@@ -155,7 +155,7 @@ export const createLevelMap = (
     return element
   }
 
-  hud.append(who, totalPill, roundButton('Locker', Palette, onLocker), roundButton('Settings', Settings, onSettings))
+  hud.append(who, totalPill, roundButton('Collection', Palette, onLocker), roundButton('Settings', Settings, onSettings))
 
   // Once the current level scrolls out of view, a pill at the bottom says where it went.
   const jump = document.createElement('button')

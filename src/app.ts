@@ -172,6 +172,7 @@ export const createGame = (mount: GameMount): Game => {
       reachSaved = false
       return ''
     },
+    onLocker: clicked(locker.open),
     onSettings: clicked(settingsSheet.open),
     onSpin: clicked(() => spinner.open(state.level.index)),
   })

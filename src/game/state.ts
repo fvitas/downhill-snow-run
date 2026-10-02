@@ -88,7 +88,7 @@ export type GameState = {
   prevX: number
   prevY: number
   angle: number
-  // How far the ball's pattern has turned, when the Locker's spin is on.
+  // How far the ball's pattern has turned, when the Collection's spin is on.
   spin: number
   direction: 1 | -1
   speed: number
