@@ -10,14 +10,14 @@ import {
   Star,
   Vibrate,
   Volume2,
-  X,
   type IconNode,
 } from 'lucide'
 import { version } from '../../package.json'
 import { setSetting, setting, watchSettings, type SettingKey } from '../game/settings.ts'
 import { UI_THEME } from '../game/themes.ts'
 import { hasFpsCap } from './fps-cap.ts'
-import { applyGlass, GLASS, PRESS, withAlpha } from './glass.ts'
+import { withAlpha } from './glass.ts'
+import { createModal } from './modal.ts'
 import { playClick } from './sound.ts'
 
 const ISSUES_URL = 'https://github.com/fvitas/downhill-snow-run/issues/new'
@@ -130,29 +130,7 @@ const group = (rows: readonly HTMLElement[]): HTMLDivElement => {
 export type SettingsSheet = { root: HTMLElement; open: () => void }
 
 export const createSettingsSheet = (): SettingsSheet => {
-  const root = document.createElement('div')
-  root.className =
-    'absolute inset-0 z-30 flex items-center justify-center bg-slate-900/45 backdrop-blur-sm'
-  root.dataset.ui = ''
-  root.style.display = 'none'
-
-  const sheet = document.createElement('div')
-  sheet.className = `${GLASS} relative flex w-[82%] flex-col items-center gap-3 rounded-[2rem] p-4 pt-5`
-  applyGlass(sheet, UI_THEME, { alpha: 0.82, elevated: true })
-  sheet.style.color = ink
-
-  const header = document.createElement('div')
-  header.className = 'flex w-full items-center justify-between pl-2'
-  const title = document.createElement('div')
-  title.className = 'text-xl font-bold'
-  title.textContent = 'Settings'
-  const close = document.createElement('button')
-  close.type = 'button'
-  close.ariaLabel = 'Close'
-  close.className = `${PRESS} flex h-9 w-9 items-center justify-center rounded-full`
-  close.style.background = withAlpha(ink, 0.08)
-  close.append(icon(X, 18))
-  header.append(title, close)
+  const { root, sheet, open } = createModal('Settings')
 
   const rate = rateUrl()
   const links = [
@@ -166,37 +144,10 @@ export const createSettingsSheet = (): SettingsSheet => {
   footer.textContent = `Version ${version}`
 
   sheet.append(
-    header,
     group(TOGGLES.map(({ key, label, on }) => switchRow(key, label, on))),
     group(links),
     footer,
   )
-  root.append(sheet)
 
-  const hide = (): void => {
-    root.style.display = 'none'
-  }
-
-  // A tap on the dimmed map around the sheet closes it, the same as the ×.
-  root.addEventListener('click', (event: MouseEvent) => {
-    if (event.target === root) hide()
-  })
-  close.addEventListener('click', () => {
-    playClick()
-    hide()
-  })
-
-  return {
-    root,
-    open: () => {
-      root.style.display = 'flex'
-      sheet.animate(
-        [
-          { opacity: 0, transform: 'scale(0.94)' },
-          { opacity: 1, transform: 'none' },
-        ],
-        { duration: 180, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' },
-      )
-    },
-  }
+  return { root, open }
 }
