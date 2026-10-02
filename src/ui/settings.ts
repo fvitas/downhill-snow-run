@@ -6,6 +6,7 @@ import {
   ChevronRight,
   createElement,
   Gauge,
+  Hand,
   Lightbulb,
   Star,
   Vibrate,
@@ -46,6 +47,7 @@ const TOGGLES: readonly { key: SettingKey; label: string; on: IconNode }[] = [
   { key: 'sound', label: 'Sound', on: Volume2 },
   { key: 'haptics', label: 'Haptics', on: Vibrate },
   { key: 'shake', label: 'Shake on crash', on: Activity },
+  { key: 'leftHanded', label: 'Pause button on the left', on: Hand },
   ...(hasFpsCap ? [{ key: 'fpsCap' as const, label: 'Limit to 60 fps', on: Gauge }] : []),
 ]
 

@@ -1,5 +1,6 @@
 import { createElement, Settings } from 'lucide'
 import { rateRun } from '../game/levels.ts'
+import { setting, watchSettings } from '../game/settings.ts'
 import {
   COUNTDOWN_TICK_SECONDS,
   levelProgress,
@@ -91,12 +92,19 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   // Out of the header's way and under the thumb that is already holding the phone.
   const pause = button(
     '',
-    `${GLASS_EDGE} ${PRESS} pointer-events-auto absolute right-4 ` +
+    `${GLASS_EDGE} ${PRESS} pointer-events-auto absolute ` +
       'bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] flex h-11 w-11 items-center ' +
       'justify-center rounded-full',
     actions.onPause,
   )
   pause.innerHTML = PAUSE_ICON
+  const placePause = (): void => {
+    const left = setting('leftHanded')
+    pause.classList.toggle('left-4', left)
+    pause.classList.toggle('right-4', !left)
+  }
+  placePause()
+  watchSettings(placePause)
 
   const header = document.createElement('div')
   header.className =

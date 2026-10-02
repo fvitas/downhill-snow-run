@@ -1,4 +1,4 @@
-const SETTING_KEYS = ['sound', 'haptics', 'shake', 'fpsCap'] as const
+const SETTING_KEYS = ['sound', 'haptics', 'shake', 'fpsCap', 'leftHanded'] as const
 
 export type SettingKey = (typeof SETTING_KEYS)[number]
 export type Settings = Record<SettingKey, boolean>
@@ -12,6 +12,7 @@ const defaults = (): Settings => ({
   shake: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   // Budget Android phones with 90 Hz panels judder uncapped; only Android shows the switch.
   fpsCap: true,
+  leftHanded: false,
 })
 
 const load = (): Settings => {
