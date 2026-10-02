@@ -335,3 +335,11 @@ export const rateRun = (level: Level, score: number, perfectScore: number): Rati
   const tier = RUN_CUTS.filter((cut) => score >= perfectScore * cut * ease).length
   return RATINGS[tier] ?? null
 }
+
+const REVIVE_OFFER_FROM = 0.5
+
+// Past halfway and on pace for at least "Great run!", which dodging every tree for distance alone never is.
+export const crashWorthReviving = (level: Level, score: number, perfectScore: number, progress: number): boolean =>
+  progress >= REVIVE_OFFER_FROM &&
+  perfectScore > 0 &&
+  score >= perfectScore * (RUN_CUTS[1] ?? 0) * (1 - HARD_EASING * level.difficulty) * progress

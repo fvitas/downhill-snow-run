@@ -7,3 +7,6 @@ project(':capacitor-haptics').projectDir = new File('../node_modules/.pnpm/@capa
 
 include ':capacitor-splash-screen'
 project(':capacitor-splash-screen').projectDir = new File('../node_modules/.pnpm/@capacitor+splash-screen@8.0.2_@capacitor+core@8.5.2/node_modules/@capacitor/splash-screen/android')
+
+include ':capgo-native-purchases'
+project(':capgo-native-purchases').projectDir = new File('../node_modules/.pnpm/@capgo+native-purchases@8.7.0_@capacitor+core@8.5.2/node_modules/@capgo/native-purchases/android')

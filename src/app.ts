@@ -5,7 +5,8 @@ import { attachInput } from './game/input.ts'
 import { attachPause, tryLockPortrait } from './game/pause.ts'
 import { emitSpray, stepParticles } from './game/particles.ts'
 import { stepPhysics } from './game/physics.ts'
-import { looks } from './game/looks.ts'
+import { purchaseNotice } from './game/entitlements.ts'
+import { looks, setLook } from './game/looks.ts'
 import { clampLevelIndex, extendCourse } from './game/levels.ts'
 import {
   clearedBefore,
@@ -46,8 +47,10 @@ import { createHud, type Hud, type HudActions } from './ui/hud.ts'
 import { createInspector } from './ui/inspect.ts'
 import { createLocker } from './ui/locker.ts'
 import { createLevelMap } from './ui/map.ts'
+import { buy, initPurchases, owns, ownsLook, watchPurchases } from './ui/purchases.ts'
 import { playHaptics } from './ui/haptics.ts'
 import { createSettingsSheet } from './ui/settings.ts'
+import { createSpinner, dropSpin, grantSpin } from './ui/spinner.ts'
 import { initSound, playClick, playSounds } from './ui/sound.ts'
 import { createTuningPanel } from './ui/sliders.ts'
 import { createTutorial } from './ui/tutorial.ts'
@@ -59,6 +62,7 @@ const TRAIL_TAIL_PX = 260
 const GO_HOLD_SECONDS = 0.3
 // How long the ball skis on past the tape before the card judges the run.
 const FINISH_COAST_SECONDS = 0.35
+const SPIN_DELAY_MS = 500
 
 export type GameMount = {
   stage: HTMLElement
@@ -85,6 +89,13 @@ export type Game = {
   stop: () => void
 }
 
+// Nothing locked rides along: a refund or a fresh install puts the classic look back on.
+const wearOnlyOwned = (): void => {
+  const { ball, trail } = looks()
+  if (!ownsLook({ kind: 'ball', id: ball })) setLook({ ball: 'classic' })
+  if (!ownsLook({ kind: 'trail', id: trail })) setLook({ trail: 'classic' })
+}
+
 export const createGame = (mount: GameMount): Game => {
   const { stage, canvas, overlay, overlayMessage } = mount
   const persist = mount.persist ?? true
@@ -100,6 +111,7 @@ export const createGame = (mount: GameMount): Game => {
   const tutorial = createTutorial(state, canvas)
 
   const openMap = (): void => {
+    dropSpin()
     state.screen = 'map'
     state.paused = false
     inspector.close()
@@ -108,6 +120,7 @@ export const createGame = (mount: GameMount): Game => {
 
   const play = (levelIndex: number, again = false): void => {
     const index = clampLevelIndex(levelIndex)
+    dropSpin()
     // The tapped button keeps focus otherwise, and input.ts ignores keys aimed at UI.
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
     state.screen = 'run'
@@ -130,7 +143,9 @@ export const createGame = (mount: GameMount): Game => {
     }
 
   const retry = clicked(() => play(state.level.index, true))
+  let buying = false
   const settingsSheet = createSettingsSheet()
+  const spinner = createSpinner()
   const locker = createLocker()
   const map = createLevelMap(clicked(play), clicked(settingsSheet.open), clicked(locker.open))
   const pauseControl = attachPause(state, overlay, overlayMessage)
@@ -141,16 +156,31 @@ export const createGame = (mount: GameMount): Game => {
     onCrashSite: clicked(inspector.open),
     onMenu: clicked(openMap),
     onPause: clicked(pauseControl.pause),
-    onSettings: clicked(settingsSheet.open),
-    onSecondChance: clicked(() => {
+    onSecondChance: async () => {
+      playClick()
+      if (buying) return ''
+      if (!owns('revive')) {
+        buying = true
+        const outcome = await buy('revive')
+        buying = false
+        if (outcome !== 'bought') return purchaseNotice(outcome)
+      }
+      // The store sheet can outlast the card: a retry tapped meanwhile is a fresh run.
+      if (!state.dead || state.secondChanceUsed) return ''
       revive(state)
       // The next crash is a new furthest point worth keeping.
       reachSaved = false
-    }),
+      return ''
+    },
+    onSettings: clicked(settingsSheet.open),
+    onSpin: clicked(() => spinner.open(state.level.index)),
   })
 
   preloadSprites()
   initSound()
+  initPurchases()
+  wearOnlyOwned()
+  watchPurchases(wearOnlyOwned)
 
   // Twelve sliders that can break the game — a playtest tool, never shipped.
   const panel = (mount.tuningPanel ?? import.meta.env.DEV) ? createTuningPanel(state) : null
@@ -162,6 +192,7 @@ export const createGame = (mount: GameMount): Game => {
     map.root,
     settingsSheet.root,
     locker.root,
+    spinner.root,
     ...(panel ? [panel.root] : []),
     inspector.root,
   )
@@ -177,6 +208,11 @@ export const createGame = (mount: GameMount): Game => {
     if (persist) saveProgress(progress)
   }
 
+  // The finish card springs in first, so the wheel reads as its reward.
+  const offerSpin = (index: number): void => {
+    if (state.screen === 'run' && state.finished && state.level.index === index) spinner.open(index)
+  }
+
   const crossFinish = (): void => {
     state.finished = true
     state.pressed = false
@@ -185,6 +221,7 @@ export const createGame = (mount: GameMount): Game => {
     progress = recordRun(progress, index, state.score)
     if (persist) saveProgress(progress)
     if (state.newBest) state.cues.push('best')
+    if (grantSpin(index)) setTimeout(() => offerSpin(index), SPIN_DELAY_MS)
   }
 
   // Crossing the tape doesn't end the run on the spot: the ball skis through it for a beat, which

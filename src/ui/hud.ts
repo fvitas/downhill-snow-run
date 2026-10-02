@@ -1,5 +1,5 @@
 import { createElement, Settings } from 'lucide'
-import { rateRun } from '../game/levels.ts'
+import { crashWorthReviving, rateRun } from '../game/levels.ts'
 import { setting, watchSettings } from '../game/settings.ts'
 import {
   COUNTDOWN_TICK_SECONDS,
@@ -10,7 +10,9 @@ import {
 import { UI_THEME } from '../game/themes.ts'
 import { applyGlass, applySolid, GLASS, GLASS_EDGE, PRESS, isDarkTheme, withAlpha } from './glass.ts'
 import { formatPoints } from './points.ts'
+import { owns, priceOf } from './purchases.ts'
 import { createPowerBadges } from './powers.ts'
+import { spinWaiting } from './spinner.ts'
 
 export type HudActions = {
   onRetry: () => void
@@ -18,8 +20,10 @@ export type HudActions = {
   onMenu: () => void
   onNext: () => void
   onPause: () => void
-  onSecondChance: () => void
+  // Resolves to a line to show under the button, or '' once the run is back on.
+  onSecondChance: () => Promise<string>
   onSettings: () => void
+  onSpin: () => void
 }
 
 // Where the finish card's score sits on screen, so the map can fly the points off it.
@@ -242,11 +246,21 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   const buttons = document.createElement('div')
   buttons.className = 'mt-5 flex w-full flex-col items-stretch gap-2'
 
-  // Picks the run up where it ended, once per run, so it leads while it is still on offer.
+  // Picks the run up where it ended, once per run. Bought, it leads; for sale, it follows the free retry.
   const secondChance = button(
     'Second chance',
     `${PRESS} relative rounded-2xl border px-4 py-3.5 text-base font-bold`,
-    actions.onSecondChance,
+    async () => {
+      notice.textContent = ''
+      notice.textContent = await actions.onSecondChance()
+    },
+  )
+  const notice = document.createElement('div')
+  notice.className = 'px-1 text-center text-xs font-semibold opacity-70 empty:hidden'
+  const spin = button(
+    'Spin to win',
+    `${PRESS} relative rounded-2xl border px-4 py-3.5 text-base font-bold`,
+    actions.onSpin,
   )
   const primary = button(
     'Let’s go again',
@@ -265,10 +279,10 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
   )
   const menu = button(
     'Levels',
-    `${PRESS} rounded-2xl px-4 py-2 text-sm font-semibold opacity-60`,
+    `${PRESS} relative rounded-2xl border px-4 py-3.5 text-base font-semibold`,
     actions.onMenu,
   )
-  buttons.append(secondChance, primary, crashSite, menu)
+  buttons.append(secondChance, notice, spin, primary, crashSite, menu)
 
   sheet.append(title, verdict, finalScore, detail, buttons)
 
@@ -424,6 +438,7 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       // Springs in once per run, not on every frame the card is up.
       if (!cardShown) {
         cardShown = true
+        notice.textContent = ''
         sheet.animate(
           [
             { transform: 'scale(0.9) translateY(12px)', opacity: 0 },
@@ -440,18 +455,37 @@ export const createHud = (state: GameState, actions: HudActions): Hud => {
       finalScore.style.color = theme.ball
       finalScore.style.textShadow = `0 2px 10px ${withAlpha(theme.ball, 0.2)}`
       applySolid(primary, theme.ink, theme.snow)
-      const canRevive = state.dead && !state.secondChanceUsed
+      // Owners get it on every crash; the offer only comes when the crash cost a run worth saving.
+      const canRevive =
+        state.dead &&
+        !state.secondChanceUsed &&
+        (owns('revive') || crashWorthReviving(level, state.score, state.course.perfectScore, levelProgress(state)))
       secondChance.style.display = canRevive ? 'block' : 'none'
       if (canRevive) applySolid(secondChance, theme.ball, '#ffffff')
+      const price = owns('revive') ? '' : priceOf('revive')
+      secondChance.textContent = price ? `Second chance · ${price}` : 'Second chance'
+      const reviveLeads = owns('revive')
+      if (reviveLeads !== (buttons.firstElementChild === secondChance)) {
+        if (reviveLeads) buttons.prepend(secondChance, notice)
+        else primary.after(secondChance, notice)
+      }
+      // Reopens a wheel closed before it was spun.
+      const canSpin = state.finished && spinWaiting(level.index)
+      spin.style.display = canSpin ? 'block' : 'none'
+      if (canSpin) applySolid(spin, theme.ball, '#ffffff')
+      notice.style.color = theme.ink
       primary.textContent = state.finished ? 'Next level' : 'Let’s go again'
-      crashSite.style.background = theme.snow
-      crashSite.style.borderColor = 'transparent'
-      crashSite.style.color = theme.ink
-      crashSite.style.boxShadow = `0 6px 16px ${withAlpha(theme.ink, 0.16)}`
+      menu.textContent = state.finished ? 'Levels' : 'Level map'
+      for (const secondary of [crashSite, menu]) {
+        secondary.style.background = theme.snow
+        secondary.style.borderColor = 'transparent'
+        secondary.style.color = theme.ink
+        secondary.style.boxShadow = `0 6px 16px ${withAlpha(theme.ink, 0.16)}`
+      }
+      crashSite.style.background = '#dbeafe'
       // A wall hit has nothing to look at: the edge is the whole screen's side.
       const inspectable = !state.finished && state.lastHit !== null && state.lastHit.kind !== 'wall'
       crashSite.style.display = inspectable ? 'block' : 'none'
-      menu.style.color = theme.ink
 
       const grade = state.finished ? rateRun(level, state.score, state.course.perfectScore) : null
       verdict.style.display = grade ? 'flex' : 'none'
